@@ -6,7 +6,7 @@ import Topbar from './components/Topbar/Topbar';
 import Dashboard from './pages/Dashboard';
 import Income from './pages/Income';
 import Expense from './pages/Expense';
-import Categories from './pages/Categories'; // Import the new page
+// The Categories import is no longer needed
 
 function App() {
   return (
@@ -18,7 +18,6 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/income" element={<Income />} />
           <Route path="/expense" element={<Expense />} />
-          <Route path="/categories" element={<Categories />} /> {/* Add the route for Categories */}
         </Routes>
       </Box>
     </Box>

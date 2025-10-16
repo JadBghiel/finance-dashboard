@@ -4,7 +4,7 @@ import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } fr
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import CategoryIcon from '@mui/icons-material/Category'; // Import the new icon
+// The CategoryIcon import is no longer needed
 
 const drawerWidth = 240;
 
@@ -12,10 +12,11 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Income', icon: <TrendingUpIcon />, path: '/income' },
   { text: 'Expense', icon: <TrendingDownIcon />, path: '/expense' },
-  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' }, // Add the new menu item
 ];
 
 function Sidebar() {
+  // ... rest of the component is the same
+  // ...
   return (
     <Drawer
       variant="permanent"
