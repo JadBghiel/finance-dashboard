@@ -1,0 +1,66 @@
+import React, { useEffect, useState } from 'react';
+import { Typography, Button, Box } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { getIncomes, createIncome } from '../services/incomeService';
+import { getCategories } from '../services/categoryService';
+import { Income as IncomeType, Category, IncomeCreate } from '../types';
+import IncomeList from '../components/Income/IncomeList';
+import AddIncomeForm from '../components/Income/AddIncomeForm';
+
+function Income() {
+  const [incomes, setIncomes] = useState<IncomeType[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isFormOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    // Fetch all data on initial load
+    fetchData();
+  }, []);
+
+  const fetchIncomeData = async () => {
+    const incomesData = await getIncomes();
+    setIncomes(incomesData);
+  };
+
+  const fetchCategoryData = async () => {
+    const categoriesData = await getCategories('income');
+    setCategories(categoriesData);
+  };
+
+  const fetchData = () => {
+    fetchIncomeData();
+    fetchCategoryData();
+  };
+
+  const handleAddIncome = async (newIncome: IncomeCreate) => {
+    await createIncome(newIncome);
+    fetchIncomeData(); // After adding income, only refetch incomes
+  };
+
+  return (
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h4">Income Transactions</Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setFormOpen(true)}
+        >
+          Add Income
+        </Button>
+      </Box>
+      
+      <IncomeList incomes={incomes} />
+
+      <AddIncomeForm
+        open={isFormOpen}
+        onClose={() => setFormOpen(false)}
+        onSubmit={handleAddIncome}
+        categories={categories}
+        onCategoryAdded={fetchCategoryData} // Pass the callback function here
+      />
+    </>
+  );
+}
+
+export default Income;
