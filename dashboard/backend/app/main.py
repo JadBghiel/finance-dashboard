@@ -8,7 +8,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# --- CORS Configuration ---
+# CORS configuration
 origins = [
     "http://localhost:3000",
 ]
@@ -21,12 +21,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Include API routers with trailing slash fix ---
-# By using include_router this way, FastAPI handles the trailing slash automatically.
+# by using include_router this way, FastAPI handles the trailing slash automatically
 app.include_router(category.router, prefix="/api", tags=["Categories"])
 app.include_router(income.router, prefix="/api", tags=["Incomes"])
 app.include_router(expense.router, prefix="/api", tags=["Expenses"])
-app.include_router(account.router, prefix="/api", tags=["Accounts"]) # Add this line
+app.include_router(account.router, prefix="/api", tags=["Accounts"])
 
 
 @app.get("/", tags=["Root"])

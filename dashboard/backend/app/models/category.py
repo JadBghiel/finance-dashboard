@@ -8,9 +8,7 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
-    type = Column(String, nullable=False) # 'income' or 'expense'
+    type = Column(String, nullable=False)
 
-    # --- ADD THESE TWO RELATIONSHIP LINES ---
-    # This tells the Category model that it can be linked to many incomes and expenses.
     incomes = relationship("Income", back_populates="category")
     expenses = relationship("Expense", back_populates="category")

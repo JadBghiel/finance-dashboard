@@ -6,7 +6,6 @@ import Topbar from './components/Topbar/Topbar';
 import Dashboard from './pages/Dashboard';
 import Income from './pages/Income';
 import Expense from './pages/Expense';
-// The Categories import is no longer needed
 
 function App() {
   return (

@@ -4,7 +4,6 @@ import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } fr
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-// The CategoryIcon import is no longer needed
 
 const drawerWidth = 240;
 
@@ -15,8 +14,6 @@ const menuItems = [
 ];
 
 function Sidebar() {
-  // ... rest of the component is the same
-  // ...
   return (
     <Drawer
       variant="permanent"

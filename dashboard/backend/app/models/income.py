@@ -15,6 +15,5 @@ class Income(Base):
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     category = relationship("Category", back_populates="incomes")
 
-    # --- ADD THESE TWO LINES ---
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
     account = relationship("Account", back_populates="incomes")
