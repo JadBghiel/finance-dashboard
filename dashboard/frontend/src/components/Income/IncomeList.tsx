@@ -21,6 +21,7 @@ function IncomeList({ incomes }: IncomeListProps) {
             <TableCell>Date</TableCell>
             <TableCell>Description</TableCell>
             <TableCell>Category</TableCell>
+            <TableCell>Account</TableCell> {/* --- ADD --- */}
             <TableCell align="right">Amount</TableCell>
           </TableRow>
         </TableHead>
@@ -30,6 +31,7 @@ function IncomeList({ incomes }: IncomeListProps) {
               <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
               <TableCell>{income.description}</TableCell>
               <TableCell>{income.category.name}</TableCell>
+              <TableCell>{income.account.name}</TableCell> {/* --- ADD --- */}
               <TableCell align="right">{`${income.amount} ${income.currency}`}</TableCell>
             </TableRow>
           ))}

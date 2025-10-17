@@ -3,13 +3,15 @@ import { Typography, Button, Box } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { getIncomes, createIncome } from '../services/incomeService';
 import { getCategories } from '../services/categoryService';
-import { Income as IncomeType, Category, IncomeCreate } from '../types';
+import * as accountService from '../services/accountService'; // --- ADD ---
+import { Income as IncomeType, Category, Account, IncomeCreate } from '../types'; // --- UPDATE ---
 import IncomeList from '../components/Income/IncomeList';
 import AddIncomeForm from '../components/Income/AddIncomeForm';
 
 function Income() {
   const [incomes, setIncomes] = useState<IncomeType[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]); // --- ADD ---
   const [isFormOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
@@ -27,9 +29,17 @@ function Income() {
     setCategories(categoriesData);
   };
 
+  // --- ADD THIS FUNCTION ---
+  const fetchAccountData = async () => {
+    const accountsData = await accountService.getAccounts();
+    setAccounts(accountsData);
+  };
+
   const fetchData = () => {
     fetchIncomeData();
     fetchCategoryData();
+    fetchAccountData(); // --- ADD THIS CALL ---
+
   };
 
   const handleAddIncome = async (newIncome: IncomeCreate) => {
@@ -57,7 +67,9 @@ function Income() {
         onClose={() => setFormOpen(false)}
         onSubmit={handleAddIncome}
         categories={categories}
+        accounts={accounts} // --- ADD ---
         onCategoryAdded={fetchCategoryData} // Pass the callback function here
+        onAccountAdded={fetchAccountData} // --- ADD ---
       />
     </>
   );

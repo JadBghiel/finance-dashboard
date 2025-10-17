@@ -4,6 +4,11 @@ export interface Category {
   type: 'income' | 'expense' | 'investment';
 }
 
+export interface Account {
+  id: number;
+  name: string;
+}
+
 export interface Income {
   id: number;
   amount: number;
@@ -12,6 +17,8 @@ export interface Income {
   date: string; // using string for simplicity, can be date object
   category_id: number;
   category: Category;
+  account_id: number;
+  account: Account;
 }
 
-export type IncomeCreate = Omit<Income, 'id' | 'category'>;
+export type IncomeCreate = Omit<Income, 'id' | 'category' | 'account'>;
