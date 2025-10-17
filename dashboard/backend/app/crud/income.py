@@ -32,8 +32,9 @@ def update_income(db: Session, income_id: int, income_data: IncomeUpdate):
     db_income = get_income(db, income_id)
     if not db_income:
         return None
-    
-    for key, value in income_data.dict().items():
+
+    update_data = income_data.dict(exclude_unset=True)
+    for key, value in update_data.items():
         setattr(db_income, key, value)
         
     db.commit()
