@@ -29,6 +29,7 @@ from app.core.database import Base
 from app.models.category import Category
 from app.models.income import Income
 from app.models.expense import Expense
+from app.models.account import Account # <-- Add this line
 
 # This is the target metadata that Alembic will use to detect changes
 target_metadata = Base.metadata

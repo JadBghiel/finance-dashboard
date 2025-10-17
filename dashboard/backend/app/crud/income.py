@@ -4,11 +4,17 @@ from app.schemas.income import IncomeCreate, IncomeUpdate
 
 def get_income(db: Session, income_id: int):
     """Fetches a single income transaction by its ID, with its category."""
-    return db.query(IncomeModel).options(joinedload(IncomeModel.category)).filter(IncomeModel.id == income_id).first()
+    return db.query(IncomeModel).options(
+        joinedload(IncomeModel.category),
+        joinedload(IncomeModel.account)  # --- ADD THIS LINE ---
+    ).filter(IncomeModel.id == income_id).first()
 
 def get_incomes(db: Session, skip: int = 0, limit: int = 100):
     """Fetches a list of income transactions with pagination, with their categories."""
-    return db.query(IncomeModel).options(joinedload(IncomeModel.category)).offset(skip).limit(limit).all()
+    return db.query(IncomeModel).options(
+        joinedload(IncomeModel.category),
+        joinedload(IncomeModel.account)  # --- ADD THIS LINE ---
+    ).offset(skip).limit(limit).all()
 
 def create_income(db: Session, income: IncomeCreate):
     """
