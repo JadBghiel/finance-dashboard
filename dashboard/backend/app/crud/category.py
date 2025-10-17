@@ -1,24 +1,25 @@
-from sqlalchemy.orm import Session
+from typing import Optional
+from sqlalchemy.orm import Session, joinedload
 from app.models.category import Category as CategoryModel
 from app.schemas.category import CategoryCreate, CategoryUpdate
 
 def get_category(db: Session, category_id: int):
-    """Fetches a single category by its ID."""
-    return db.query(CategoryModel).filter(CategoryModel.id == category_id).first()
+    return db.query(CategoryModel).options(
+        joinedload(CategoryModel.incomes),
+        joinedload(CategoryModel.expenses)
+    ).filter(CategoryModel.id == category_id).first()
 
-def get_categories(db: Session, category_type: str | None = None, skip: int = 0, limit: int = 100):
-    """
-    Fetches categories with pagination.
-    Optionally filters by category_type if provided.
-    """
-    query = db.query(CategoryModel)
+def get_categories(db: Session, category_type: Optional[str] = None, skip: int = 0, limit: int = 100):
+    query = db.query(CategoryModel).options(
+        joinedload(CategoryModel.incomes),
+        joinedload(CategoryModel.expenses)
+    )
     if category_type:
         query = query.filter(CategoryModel.type == category_type)
     return query.offset(skip).limit(limit).all()
 
 def create_category(db: Session, category: CategoryCreate):
-    """Creates a new category in the database."""
-    db_category = CategoryModel(name=category.name, type=category.type)
+    db_category = CategoryModel(**category.dict())
     db.add(db_category)
     db.commit()
     db.refresh(db_category)
