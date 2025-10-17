@@ -1,19 +1,24 @@
 from pydantic import BaseModel, ConfigDict
+from typing import List, TYPE_CHECKING
+
+# askip a common pattern to handle circular imports with pydantic
+if TYPE_CHECKING:
+    from .income import Income
+    from .expense import Expense
 
 class CategoryBase(BaseModel):
-    """Base schema for category data."""
     name: str
     type: str
 
 class CategoryCreate(CategoryBase):
-    """Schema for creating a new category."""
     pass
 
 class CategoryUpdate(CategoryBase):
-    """Schema for updating an existing category."""
     pass
 
 class Category(CategoryBase):
-    """Schema for returning a category from the API."""
     id: int
+    incomes: List["Income"] = []   # define the relationship
+    expenses: List["Expense"] = [] # define the relationship
+
     model_config = ConfigDict(from_attributes=True)
