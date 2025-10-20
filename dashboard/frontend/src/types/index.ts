@@ -22,5 +22,3 @@ export interface Income {
 }
 
 export type IncomeCreate = Omit<Income, 'id' | 'category' | 'account'>;
-
-export type IncomeUpdate = Partial<IncomeCreate>;

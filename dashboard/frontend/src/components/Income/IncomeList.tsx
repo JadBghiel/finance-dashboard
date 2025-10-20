@@ -1,16 +1,18 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography
+} from '@mui/material';
 import { Income } from '../../types';
 
 interface IncomeListProps {
   incomes: Income[];
-  onEdit: (income: Income) => void;
-  onDelete: (id: number) => void;
 }
 
-function IncomeList({ incomes, onEdit, onDelete }: IncomeListProps) {
+function IncomeList({ incomes }: IncomeListProps) {
+  if (incomes.length === 0) {
+    return <Typography>No income transactions recorded yet.</Typography>;
+  }
+
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -19,9 +21,8 @@ function IncomeList({ incomes, onEdit, onDelete }: IncomeListProps) {
             <TableCell>Date</TableCell>
             <TableCell>Description</TableCell>
             <TableCell>Category</TableCell>
-            <TableCell>Account</TableCell>
+            <TableCell>Account</TableCell> {/* --- ADD --- */}
             <TableCell align="right">Amount</TableCell>
-            <TableCell align="center">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -30,16 +31,8 @@ function IncomeList({ incomes, onEdit, onDelete }: IncomeListProps) {
               <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
               <TableCell>{income.description}</TableCell>
               <TableCell>{income.category.name}</TableCell>
-              <TableCell>{income.account.name}</TableCell>
+              <TableCell>{income.account.name}</TableCell> {/* --- ADD --- */}
               <TableCell align="right">{`${income.amount} ${income.currency}`}</TableCell>
-              <TableCell align="center">
-                <IconButton onClick={() => onEdit(income)} size="small">
-                  <EditIcon />
-                </IconButton>
-                <IconButton onClick={() => onDelete(income.id)} size="small">
-                  <DeleteIcon />
-                </IconButton>
-              </TableCell>
             </TableRow>
           ))}
         </TableBody>

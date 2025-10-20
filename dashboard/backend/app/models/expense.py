@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class Expense(Base):
+    """Database model for an expense transaction."""
     __tablename__ = "expenses"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -12,7 +13,7 @@ class Expense(Base):
     date = Column(DateTime, nullable=False)
     
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
-    category = relationship("Category", back_populates="expenses", lazy="joined")
+    category = relationship("Category", back_populates="expenses")
 
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
-    account = relationship("Account", back_populates="expenses", lazy="joined")
+    account = relationship("Account", back_populates="expenses")
