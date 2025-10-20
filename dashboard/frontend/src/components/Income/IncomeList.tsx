@@ -4,15 +4,54 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { Income } from '../../types';
+
+type SortKey = 'date' | 'description' | 'category' | 'account' | 'amount' | null;
 
 interface IncomeListProps {
   incomes: Income[];
   onEdit?: (income: Income) => void;
   onDelete?: (id: number) => void;
+  sortKey?: SortKey;
+  sortDir?: 'asc' | 'desc';
+  onRequestSort?: (key: Exclude<SortKey, null>) => void;
 }
 
-function IncomeList({ incomes, onEdit, onDelete }: IncomeListProps) {
+function SortHeader({
+  label,
+  column,
+  sortKey,
+  sortDir,
+  onRequestSort,
+}: {
+  label: string;
+  column: Exclude<SortKey, null>;
+  sortKey?: SortKey;
+  sortDir?: 'asc' | 'desc';
+  onRequestSort?: (key: Exclude<SortKey, null>) => void;
+}) {
+  const active = sortKey === column;
+  const Icon = active && sortDir === 'asc' ? ArrowUpwardIcon : active && sortDir === 'desc' ? ArrowDownwardIcon : ArrowUpwardIcon;
+  const opacity = active ? 1 : 0.25;
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box component="span">{label}</Box>
+      <IconButton
+        size="small"
+        onClick={() => onRequestSort && onRequestSort(column)}
+        sx={{ p: 0.5 }}
+        aria-label={`sort-${column}`}
+      >
+        <Icon fontSize="small" sx={{ opacity }} />
+      </IconButton>
+    </Box>
+  );
+}
+
+function IncomeList({ incomes, onEdit, onDelete, sortKey, sortDir, onRequestSort }: IncomeListProps) {
   if (incomes.length === 0) {
     return <Typography>No income transactions recorded yet.</Typography>;
   }
@@ -22,11 +61,11 @@ function IncomeList({ incomes, onEdit, onDelete }: IncomeListProps) {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Date</TableCell>
-            <TableCell>Description</TableCell>
-            <TableCell>Category</TableCell>
-            <TableCell>Account</TableCell>
-            <TableCell align="right">Amount</TableCell>
+            <TableCell><SortHeader label="Date" column="date" sortKey={sortKey} sortDir={sortDir} onRequestSort={onRequestSort} /></TableCell>
+            <TableCell><SortHeader label="Description" column="description" sortKey={sortKey} sortDir={sortDir} onRequestSort={onRequestSort} /></TableCell>
+            <TableCell><SortHeader label="Category" column="category" sortKey={sortKey} sortDir={sortDir} onRequestSort={onRequestSort} /></TableCell>
+            <TableCell><SortHeader label="Account" column="account" sortKey={sortKey} sortDir={sortDir} onRequestSort={onRequestSort} /></TableCell>
+            <TableCell align="right"><SortHeader label="Amount" column="amount" sortKey={sortKey} sortDir={sortDir} onRequestSort={onRequestSort} /></TableCell>
             <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Typography, Button, Box, TextField, InputAdornment } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -9,6 +9,8 @@ import { Income as IncomeType, Category, Account, IncomeCreate } from '../types'
 import IncomeList from '../components/Income/IncomeList';
 import AddIncomeForm from '../components/Income/AddIncomeForm';
 
+type SortKey = 'date' | 'description' | 'category' | 'account' | 'amount' | null;
+
 function Income() {
   const [incomes, setIncomes] = useState<IncomeType[]>([]);
   const [filtered, setFiltered] = useState<IncomeType[]>([]);
@@ -18,13 +20,14 @@ function Income() {
   const [editingIncome, setEditingIncome] = useState<IncomeType | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [sortKey, setSortKey] = useState<SortKey>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
   useEffect(() => {
-    // fetch all data on initial load
     fetchData();
   }, []);
 
   useEffect(() => {
-    // debounce search to avoid filtering on every keystroke
     const t = setTimeout(() => {
       applyFilter(searchQuery, incomes);
     }, 300);
@@ -60,22 +63,19 @@ function Income() {
       return;
     }
 
-    // try parsing a numeric portion for amount matching
     const numericQuery = q.replace(',', '.').match(/-?\d+(\.\d+)?/);
     const numStr = numericQuery ? numericQuery[0] : null;
 
     const result = list.filter((inc) => {
-      // text matching on description, category.name, account.name
       const desc = (inc.description ?? '').toString().toLowerCase();
       const cat = (inc.category?.name ?? '').toString().toLowerCase();
       const acc = (inc.account?.name ?? '').toString().toLowerCase();
 
       const textMatch = desc.includes(q) || cat.includes(q) || acc.includes(q);
 
-      // numeric matching on amount: partial or exact
       let numMatch = false;
       if (numStr) {
-        const amountStr = String(Number(inc.amount)); // normalize
+        const amountStr = String(Number(inc.amount));
         numMatch = amountStr.includes(numStr);
       }
 
@@ -87,7 +87,6 @@ function Income() {
 
   const handleAddIncome = async (newIncome: IncomeCreate) => {
     if (editingIncome) {
-      // editing existing income
       await updateIncome(editingIncome.id, newIncome);
       setEditingIncome(null);
     } else {
@@ -110,6 +109,63 @@ function Income() {
     setFormOpen(false);
     setEditingIncome(null);
   };
+
+  const handleRequestSort = (key: Exclude<SortKey, null>) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const baseList = filtered.length ? filtered : incomes;
+
+  const displayed = useMemo(() => {
+    const list = [...baseList];
+    if (!sortKey) return list;
+
+    list.sort((a, b) => {
+      let va: any;
+      let vb: any;
+
+      switch (sortKey) {
+        case 'date':
+          va = new Date(a.date).getTime();
+          vb = new Date(b.date).getTime();
+          break;
+        case 'amount':
+          va = Number(a.amount);
+          vb = Number(b.amount);
+          break;
+        case 'description':
+          va = (a.description ?? '').toString().toLowerCase();
+          vb = (b.description ?? '').toString().toLowerCase();
+          break;
+        case 'category':
+          va = (a.category?.name ?? '').toString().toLowerCase();
+          vb = (b.category?.name ?? '').toString().toLowerCase();
+          break;
+        case 'account':
+          va = (a.account?.name ?? '').toString().toLowerCase();
+          vb = (b.account?.name ?? '').toString().toLowerCase();
+          break;
+        default:
+          va = '';
+          vb = '';
+      }
+
+      if (typeof va === 'string') {
+        const cmp = va.localeCompare(vb);
+        return sortDir === 'asc' ? cmp : -cmp;
+      } else {
+        const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+    });
+
+    return list;
+  }, [baseList, sortKey, sortDir]);
 
   return (
     <>
@@ -142,7 +198,14 @@ function Income() {
         </Box>
       </Box>
 
-      <IncomeList incomes={filtered.length ? filtered : incomes} onEdit={handleEdit} onDelete={handleDelete} />
+      <IncomeList
+        incomes={displayed}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onRequestSort={handleRequestSort}
+      />
 
       <AddIncomeForm
         open={isFormOpen}

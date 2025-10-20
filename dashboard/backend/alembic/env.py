@@ -11,30 +11,30 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# interpret the config file for Python logging.
+# this line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# --- START OF CHANGES ---
+# START OF CHANGES
 
-# Add the 'backend' directory to the Python path
-# This allows Alembic to find your 'app' module
+# add the "backend" directory to the python path
+# allows alembic to find your app module
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Import your Base model from your application
+# import your Base model from your application
 from app.core.database import Base
 
-# Import all of your models here so that Base knows about them
+# import all of your models here so that Base knows about them
 from app.models.category import Category
 from app.models.income import Income
 from app.models.expense import Expense
-from app.models.account import Account # <-- Add this line
+from app.models.account import Account
 
-# This is the target metadata that Alembic will use to detect changes
+# target metadata that alembic will use to detect changes
 target_metadata = Base.metadata
 
-# --- END OF CHANGES ---
+# END OF CHANGES
 
 
 def run_migrations_offline() -> None:
@@ -54,7 +54,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}), # Corrected line
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
