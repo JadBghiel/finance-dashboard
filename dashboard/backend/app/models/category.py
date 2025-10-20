@@ -8,7 +8,7 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
-    type = Column(String, nullable=False)
+    type = Column(String, nullable=False) # income or expense
 
-    incomes = relationship("Income", back_populates="category")
-    expenses = relationship("Expense", back_populates="category")
+    incomes = relationship("Income", back_populates="category", lazy="joined")
+    expenses = relationship("Expense", back_populates="category", lazy="joined")

@@ -1,11 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from decimal import Decimal
-
-# forward references are handled by the other files now
+from typing import Optional
 from .category import Category
 from .account import Account
-from typing import Optional
 
 class IncomeBase(BaseModel):
     amount: Decimal
