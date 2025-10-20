@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Box } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import { Category, Account, IncomeCreate } from '../../types';
+import { Category, Account, Income as IncomeType, IncomeCreate } from '../../types';
 import * as categoryService from '../../services/categoryService';
 import * as accountService from '../../services/accountService';
 
@@ -13,6 +13,7 @@ interface AddIncomeFormProps {
   accounts: Account[];
   onCategoryAdded: () => void;
   onAccountAdded: () => void;
+  initialIncome?: IncomeType | null;
 }
 
 const initialState: Omit<IncomeCreate, 'currency'> = {
@@ -23,7 +24,16 @@ const initialState: Omit<IncomeCreate, 'currency'> = {
   account_id: 0,
 };
 
-function AddIncomeForm({ open, onClose, onSubmit, categories, accounts, onCategoryAdded, onAccountAdded }: AddIncomeFormProps) {
+function AddIncomeForm({
+  open,
+  onClose,
+  onSubmit,
+  categories,
+  accounts,
+  onCategoryAdded,
+  onAccountAdded,
+  initialIncome = null,
+}: AddIncomeFormProps) {
   const [formState, setFormState] = useState(initialState);
   
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -31,6 +41,21 @@ function AddIncomeForm({ open, onClose, onSubmit, categories, accounts, onCatego
 
   const [showNewAccount, setShowNewAccount] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
+
+  // populate form when editing
+  useEffect(() => {
+    if (initialIncome) {
+      setFormState({
+        amount: Number(initialIncome.amount),
+        description: initialIncome.description ?? '',
+        date: new Date(initialIncome.date).toISOString().split('T')[0],
+        category_id: initialIncome.category_id,
+        account_id: initialIncome.account_id,
+      });
+    } else {
+      setFormState(initialState);
+    }
+  }, [initialIncome, open]);
 
   const handleAddNewCategory = async () => {
     if (!newCategoryName) return;
@@ -53,7 +78,7 @@ function AddIncomeForm({ open, onClose, onSubmit, categories, accounts, onCatego
       ...formState,
       amount: Number(formState.amount),
       date: new Date(formState.date).toISOString(),
-      currency: 'USD',
+      currency: (initialIncome && (initialIncome as IncomeType).currency) || 'USD',
     };
     onSubmit(newIncome);
     onClose();
@@ -64,7 +89,7 @@ function AddIncomeForm({ open, onClose, onSubmit, categories, accounts, onCatego
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Add New Income</DialogTitle>
+      <DialogTitle>{initialIncome ? 'Edit Income' : 'Add New Income'}</DialogTitle>
       <DialogContent>
         <TextField margin="normal" fullWidth name="amount" label="Amount" type="number" value={formState.amount} onChange={(e) => setFormState(p => ({...p, amount: Number(e.target.value)}))} required />
         <TextField margin="normal" fullWidth name="description" label="Description" value={formState.description} onChange={(e) => setFormState(p => ({...p, description: e.target.value}))} />
@@ -87,7 +112,7 @@ function AddIncomeForm({ open, onClose, onSubmit, categories, accounts, onCatego
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={!isFormValid}>Add Income</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={!isFormValid}>{initialIncome ? 'Save Changes' : 'Add Income'}</Button>
       </DialogActions>
     </Dialog>
   );

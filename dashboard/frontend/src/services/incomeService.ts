@@ -11,4 +11,11 @@ export const createIncome = async (income: IncomeCreate): Promise<Income> => {
   return response.data;
 };
 
-// add updateIncome and deleteIncome functions here later
+export const updateIncome = async (id: number, income: IncomeCreate): Promise<Income> => {
+  const response = await api.put(`/incomes/${id}/`, income);
+  return response.data;
+};
+
+export const deleteIncome = async (id: number): Promise<void> => {
+  await api.delete(`/incomes/${id}/`);
+};

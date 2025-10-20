@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Typography, Button, Box } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { getIncomes, createIncome } from '../services/incomeService';
+import { getIncomes, createIncome, updateIncome, deleteIncome } from '../services/incomeService';
 import { getCategories } from '../services/categoryService';
 import * as accountService from '../services/accountService';
 import { Income as IncomeType, Category, Account, IncomeCreate } from '../types';
@@ -13,6 +13,7 @@ function Income() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isFormOpen, setFormOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<IncomeType | null>(null);
 
   useEffect(() => {
     // fetch all data on initial load
@@ -42,8 +43,29 @@ function Income() {
   };
 
   const handleAddIncome = async (newIncome: IncomeCreate) => {
-    await createIncome(newIncome);
+    if (editingIncome) {
+      // editing existing income
+      await updateIncome(editingIncome.id, newIncome);
+      setEditingIncome(null);
+    } else {
+      await createIncome(newIncome);
+    }
     fetchIncomeData();
+  };
+
+  const handleEdit = (income: IncomeType) => {
+    setEditingIncome(income);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    await deleteIncome(id);
+    fetchIncomeData();
+  };
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setEditingIncome(null);
   };
 
   return (
@@ -53,22 +75,23 @@ function Income() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setFormOpen(true)}
+          onClick={() => { setEditingIncome(null); setFormOpen(true); }}
         >
           Add Income
         </Button>
       </Box>
       
-      <IncomeList incomes={incomes} />
+      <IncomeList incomes={incomes} onEdit={handleEdit} onDelete={handleDelete} />
 
       <AddIncomeForm
         open={isFormOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={handleCloseForm}
         onSubmit={handleAddIncome}
         categories={categories}
         accounts={accounts}
         onCategoryAdded={fetchCategoryData}
         onAccountAdded={fetchAccountData}
+        initialIncome={editingIncome}
       />
     </>
   );
