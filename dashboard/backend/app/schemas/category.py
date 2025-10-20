@@ -1,10 +1,6 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, TYPE_CHECKING
 
-# askip a common pattern to handle circular imports with pydantic
-if TYPE_CHECKING:
-    from .income import Income
-    from .expense import Expense
+# no longer needs to import income or expense, breaking the loop
 
 class CategoryBase(BaseModel):
     name: str
@@ -18,7 +14,10 @@ class CategoryUpdate(CategoryBase):
 
 class Category(CategoryBase):
     id: int
-    incomes: List["Income"] = []   # define the relationship
-    expenses: List["Expense"] = [] # define the relationship
+    model_config = ConfigDict(from_attributes=True)
 
+# a new "public" schema that is safe for API responses
+# it does not include the incomes or expenses fields
+class CategoryPublic(CategoryBase):
+    id: int
     model_config = ConfigDict(from_attributes=True)

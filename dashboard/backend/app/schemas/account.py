@@ -1,9 +1,4 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .income import Income
-    from .expense import Expense
 
 class AccountBase(BaseModel):
     name: str
@@ -13,7 +8,9 @@ class AccountCreate(AccountBase):
 
 class Account(AccountBase):
     id: int
-    incomes: List["Income"] = []   # define the relationship
-    expenses: List["Expense"] = [] # define the relationship
+    model_config = ConfigDict(from_attributes=True)
 
+# a new "public" schema that is safe for API responses
+class AccountPublic(AccountBase):
+    id: int
     model_config = ConfigDict(from_attributes=True)
