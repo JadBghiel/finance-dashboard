@@ -19,6 +19,7 @@ interface AddIncomeFormProps {
 const currencyOptions = [
   { code: 'EUR', label: 'Euro', symbol: '€' },
   { code: 'USD', label: 'US Dollar', symbol: '$' },
+  { code: 'GBP', label: 'British Pound', symbol: '£' },
   { code: 'JPY', label: 'Japanese Yen', symbol: '¥' },
   { code: 'CAD', label: 'Canadian Dollar', symbol: 'CA$' },
   { code: 'MAD', label: 'Moroccan Dirham', symbol: 'MAD' },
@@ -125,10 +126,7 @@ function AddIncomeForm({
             >
               {currencyOptions.map((c) => (
                 <MenuItem key={c.code} value={c.code}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{ minWidth: 28 }}>{c.symbol}</Typography>
-                    <span>{c.code} — {c.label}</span>
-                  </Box>
+                  <span>{c.code} — {c.label}</span>
                 </MenuItem>
               ))}
             </Select>

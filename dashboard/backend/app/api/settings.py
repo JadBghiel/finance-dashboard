@@ -7,14 +7,15 @@ router = APIRouter()
 
 @router.get("/settings/base-currency/")
 def get_base_currency():
-    """Return the configured base currency."""
+    """return the configured base currency"""
     return {"base_currency": config.BASE_CURRENCY}
 
 @router.post("/settings/base-currency/")
 def set_base_currency(payload: BaseCurrencyUpdate):
     """
-    Update (or create) BASE_CURRENCY entry in backend/.env file.
-    Note: this writes to backend/.env for future restarts; it does not reload process env.
+    update (or create) BASE_CURRENCY entry in backend/.env file
+    FIXED: this now also updates os.environ and the in memory config.BASE_CURRENCY so
+    the running process reflects the change immediately
     """
     new = payload.base_currency.strip().upper()
     if not new:
@@ -48,5 +49,15 @@ def set_base_currency(payload: BaseCurrencyUpdate):
                 f.write(line)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to write .env: {e}")
+
+    # update running process environment and in-memory config
+    try:
+        os.environ["BASE_CURRENCY"] = new
+        # update the attribute in the config module so other parts reading
+        # app.core.config.BASE_CURRENCY get the new value immediately
+        config.BASE_CURRENCY = new
+    except Exception:
+        # already wrote the .env file so continue
+        pass
 
     return {"base_currency": new}

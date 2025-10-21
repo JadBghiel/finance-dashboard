@@ -19,6 +19,18 @@ interface IncomeListProps {
   onRequestSort?: (key: Exclude<SortKey, null>) => void;
 }
 
+const currencySymbols: Record<string, string> = {
+  EUR: '€',
+  USD: '$',
+  GBP: '£',
+  CAD: 'CA$',
+  MAD: 'MAD',
+  AED: 'AED',
+  AUD: 'A$',
+  CHF: 'CHF',
+  CNY: '¥',
+};
+
 function SortHeader({
   label,
   column,
@@ -70,30 +82,33 @@ function IncomeList({ incomes, onEdit, onDelete, sortKey, sortDir, onRequestSort
           </TableRow>
         </TableHead>
         <TableBody>
-          {incomes.map((income) => (
-            <TableRow key={income.id}>
-              <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
-              <TableCell>{income.description}</TableCell>
-              <TableCell>{income.category.name}</TableCell>
-              <TableCell>{income.account.name}</TableCell>
-              <TableCell align="right">{`${income.amount} ${income.currency}`}</TableCell>
-              <TableCell align="right">
-                <Box>
-                  <IconButton size="small" aria-label="edit" onClick={() => onEdit && onEdit(income)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" aria-label="delete" onClick={() => {
-                    if (!onDelete) return;
-                    if (window.confirm('Delete this income?')) {
-                      onDelete(income.id);
-                    }
-                  }}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </TableCell>
-            </TableRow>
-          ))}
+          {incomes.map((income) => {
+            const symbol = currencySymbols[income.currency] ?? '';
+            return (
+              <TableRow key={income.id}>
+                <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
+                <TableCell>{income.description}</TableCell>
+                <TableCell>{income.category.name}</TableCell>
+                <TableCell>{income.account.name}</TableCell>
+                <TableCell align="right">{`${symbol} ${income.amount} ${income.currency}`}</TableCell>
+                <TableCell align="right">
+                  <Box>
+                    <IconButton size="small" aria-label="edit" onClick={() => onEdit && onEdit(income)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" aria-label="delete" onClick={() => {
+                      if (!onDelete) return;
+                      if (window.confirm('Delete this income?')) {
+                        onDelete(income.id);
+                      }
+                    }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
