@@ -6,13 +6,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import { Income } from '../../types';
+import { Expense } from '../../types';
 
 type SortKey = 'date' | 'description' | 'category' | 'account' | 'amount' | null;
 
-interface IncomeListProps {
-  incomes: Income[];
-  onEdit?: (income: Income) => void;
+interface ExpenseListProps {
+  expenses: Expense[];
+  onEdit?: (expense: Expense) => void;
   onDelete?: (id: number) => void;
   sortKey?: SortKey;
   sortDir?: 'asc' | 'desc';
@@ -23,6 +23,7 @@ const currencySymbols: Record<string, string> = {
   EUR: '€',
   USD: '$',
   GBP: '£',
+  JPY: '¥',
   CAD: 'CA$',
   MAD: 'MAD',
   AED: 'AED',
@@ -63,9 +64,9 @@ function SortHeader({
   );
 }
 
-function IncomeList({ incomes, onEdit, onDelete, sortKey, sortDir, onRequestSort }: IncomeListProps) {
-  if (incomes.length === 0) {
-    return <Typography>No income transactions recorded yet</Typography>;
+function ExpenseList({ expenses, onEdit, onDelete, sortKey, sortDir, onRequestSort }: ExpenseListProps) {
+  if (expenses.length === 0) {
+    return <Typography>No expense transactions recorded yet</Typography>;
   }
 
   return (
@@ -82,24 +83,24 @@ function IncomeList({ incomes, onEdit, onDelete, sortKey, sortDir, onRequestSort
           </TableRow>
         </TableHead>
         <TableBody>
-          {incomes.map((income) => {
-            const symbol = currencySymbols[income.currency] ?? '';
+          {expenses.map((expense) => {
+            const symbol = currencySymbols[expense.currency] ?? '';
             return (
-              <TableRow key={income.id}>
-                <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
-                <TableCell>{income.description}</TableCell>
-                <TableCell>{income.category.name}</TableCell>
-                <TableCell>{income.account.name}</TableCell>
-                <TableCell align="right">{`${symbol} ${income.amount} ${income.currency}`}</TableCell>
+              <TableRow key={expense.id}>
+                <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                <TableCell>{expense.description}</TableCell>
+                <TableCell>{expense.category.name}</TableCell>
+                <TableCell>{expense.account.name}</TableCell>
+                <TableCell align="right">{`${symbol} ${expense.amount} ${expense.currency}`}</TableCell>
                 <TableCell align="right">
                   <Box>
-                    <IconButton size="small" aria-label="edit" onClick={() => onEdit && onEdit(income)}>
+                    <IconButton size="small" aria-label="edit" onClick={() => onEdit && onEdit(expense)}>
                       <EditIcon fontSize="small" />
                     </IconButton>
                     <IconButton size="small" aria-label="delete" onClick={() => {
                       if (!onDelete) return;
-                      if (window.confirm('Delete this income?')) {
-                        onDelete(income.id);
+                      if (window.confirm('Delete this expense?')) {
+                        onDelete(expense.id);
                       }
                     }}>
                       <DeleteIcon fontSize="small" />
@@ -115,4 +116,4 @@ function IncomeList({ incomes, onEdit, onDelete, sortKey, sortDir, onRequestSort
   );
 }
 
-export default IncomeList;
+export default ExpenseList;

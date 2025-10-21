@@ -22,3 +22,18 @@ export interface Income {
 }
 
 export type IncomeCreate = Omit<Income, 'id' | 'category' | 'account'>;
+
+// added expense types (mirror of income)
+export interface Expense {
+  id: number;
+  amount: number;
+  currency: string;
+  description: string | null;
+  date: string;
+  category_id: number;
+  category: Category;
+  account_id: number;
+  account: Account;
+}
+
+export type ExpenseCreate = Omit<Expense, 'id' | 'category' | 'account'>;
