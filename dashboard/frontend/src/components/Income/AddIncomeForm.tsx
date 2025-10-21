@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Box } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Box, Select, FormControl, InputLabel, Typography } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { Category, Account, Income as IncomeType, IncomeCreate } from '../../types';
 import * as categoryService from '../../services/categoryService';
@@ -16,8 +16,21 @@ interface AddIncomeFormProps {
   initialIncome?: IncomeType | null;
 }
 
-const initialState: Omit<IncomeCreate, 'currency'> = {
+const currencyOptions = [
+  { code: 'EUR', label: 'Euro', symbol: '€' },
+  { code: 'USD', label: 'US Dollar', symbol: '$' },
+  { code: 'JPY', label: 'Japanese Yen', symbol: '¥' },
+  { code: 'CAD', label: 'Canadian Dollar', symbol: 'CA$' },
+  { code: 'MAD', label: 'Moroccan Dirham', symbol: 'MAD' },
+  { code: 'AED', label: 'Emirati Dirham', symbol: 'AED' },
+  { code: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
+  { code: 'CHF', label: 'Swiss Franc', symbol: 'CHF' },
+  { code: 'CNY', label: 'Chinese Renminbi', symbol: '¥' },
+];
+
+const initialState: IncomeCreate = {
   amount: 0,
+  currency: 'USD',
   description: '',
   date: new Date().toISOString().split('T')[0],
   category_id: 0,
@@ -34,7 +47,7 @@ function AddIncomeForm({
   onAccountAdded,
   initialIncome = null,
 }: AddIncomeFormProps) {
-  const [formState, setFormState] = useState(initialState);
+  const [formState, setFormState] = useState<IncomeCreate>(initialState);
   
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -47,6 +60,7 @@ function AddIncomeForm({
     if (initialIncome) {
       setFormState({
         amount: Number(initialIncome.amount),
+        currency: initialIncome.currency ?? 'USD',
         description: initialIncome.description ?? '',
         date: new Date(initialIncome.date).toISOString().split('T')[0],
         category_id: initialIncome.category_id,
@@ -78,20 +92,49 @@ function AddIncomeForm({
       ...formState,
       amount: Number(formState.amount),
       date: new Date(formState.date).toISOString(),
-      currency: (initialIncome && (initialIncome as IncomeType).currency) || 'USD',
     };
     onSubmit(newIncome);
     onClose();
     setFormState(initialState);
   };
 
-  const isFormValid = formState.amount > 0 && formState.category_id !== 0 && formState.account_id !== 0;
+  const isFormValid = formState.amount > 0 && formState.category_id !== 0 && formState.account_id !== 0 && !!formState.currency;
 
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>{initialIncome ? 'Edit Income' : 'Add New Income'}</DialogTitle>
       <DialogContent>
-        <TextField margin="normal" fullWidth name="amount" label="Amount" type="number" value={formState.amount} onChange={(e) => setFormState(p => ({...p, amount: Number(e.target.value)}))} required />
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+          <TextField
+            margin="normal"
+            name="amount"
+            label="Amount"
+            type="number"
+            value={formState.amount}
+            onChange={(e) => setFormState(p => ({...p, amount: Number(e.target.value)}))}
+            required
+            sx={{ flex: 1 }}
+          />
+          <FormControl margin="normal" size="small" sx={{ minWidth: 140 }}>
+            <InputLabel id="currency-select-label">Currency</InputLabel>
+            <Select
+              labelId="currency-select-label"
+              value={formState.currency}
+              label="Currency"
+              onChange={(e) => setFormState(p => ({...p, currency: String(e.target.value)}))}
+            >
+              {currencyOptions.map((c) => (
+                <MenuItem key={c.code} value={c.code}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" sx={{ minWidth: 28 }}>{c.symbol}</Typography>
+                    <span>{c.code} — {c.label}</span>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
         <TextField margin="normal" fullWidth name="description" label="Description" value={formState.description} onChange={(e) => setFormState(p => ({...p, description: e.target.value}))} />
         <TextField margin="normal" fullWidth name="date" label="Date" type="date" value={formState.date} onChange={(e) => setFormState(p => ({...p, date: e.target.value}))} InputLabelProps={{ shrink: true }} />
 

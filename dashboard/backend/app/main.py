@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import category, income, expense, account
+from app.api import category, income, expense, account, settings
 
 app = FastAPI(
     title="Personal Finance Dashboard API",
@@ -26,6 +26,7 @@ app.include_router(category.router, prefix="/api", tags=["Categories"])
 app.include_router(income.router, prefix="/api", tags=["Incomes"])
 app.include_router(expense.router, prefix="/api", tags=["Expenses"])
 app.include_router(account.router, prefix="/api", tags=["Accounts"])
+app.include_router(settings.router, prefix="/api", tags=["Settings"])
 
 
 @app.get("/", tags=["Root"])
