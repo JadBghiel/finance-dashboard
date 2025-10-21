@@ -3,14 +3,14 @@ from app.models.income import Income as IncomeModel
 from app.schemas.income import IncomeCreate, IncomeUpdate
 
 def get_income(db: Session, income_id: int):
-    """Fetches a single income transaction by its ID, with its category."""
+    """fetches a single income transaction by its id, with its category"""
     return db.query(IncomeModel).options(
         joinedload(IncomeModel.category),
         joinedload(IncomeModel.account)
     ).filter(IncomeModel.id == income_id).first()
 
 def get_incomes(db: Session, skip: int = 0, limit: int = 100):
-    """Fetches a list of income transactions with pagination, with their categories."""
+    """fetches a list of income transactions with pagination, with their categories"""
     return db.query(IncomeModel).options(
         joinedload(IncomeModel.category),
         joinedload(IncomeModel.account)
@@ -18,7 +18,7 @@ def get_incomes(db: Session, skip: int = 0, limit: int = 100):
 
 def create_income(db: Session, income: IncomeCreate):
     """
-    Creates a new income transaction and returns it with the category loaded.
+    creates a new income transaction and returns it with the category loaded
     """
     db_income = IncomeModel(**income.dict())
     db.add(db_income)
@@ -28,7 +28,7 @@ def create_income(db: Session, income: IncomeCreate):
     return get_income(db, db_income.id)
 
 def update_income(db: Session, income_id: int, income_data: IncomeUpdate):
-    """Updates an existing income transaction."""
+    """updates an existing income transaction"""
     db_income = get_income(db, income_id)
     if not db_income:
         return None
@@ -41,7 +41,7 @@ def update_income(db: Session, income_id: int, income_data: IncomeUpdate):
     return get_income(db, db_income.id)
 
 def delete_income(db: Session, income_id: int):
-    """Deletes an income transaction from the database."""
+    """deletes an income transaction from the db"""
     db_income = get_income(db, income_id)
     if not db_income:
         return None

@@ -4,7 +4,7 @@ from app.api import category, income, expense, account, settings
 
 app = FastAPI(
     title="Personal Finance Dashboard API",
-    description="API for tracking income, expenses, savings, and investments.",
+    description="API for tracking income, expenses, savings, and investments",
     version="0.1.0",
 )
 
@@ -31,5 +31,5 @@ app.include_router(settings.router, prefix="/api", tags=["Settings"])
 
 @app.get("/", tags=["Root"])
 def read_root():
-    """A welcome message to confirm the API is running."""
-    return {"message": "Welcome to the Personal Finance Dashboard API"}
+    """welcome, this confirms the API is running"""
+    return {"message": "Welcome to the personal finance dashboard API"}

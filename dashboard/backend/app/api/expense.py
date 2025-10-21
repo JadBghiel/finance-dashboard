@@ -9,17 +9,17 @@ router = APIRouter()
 
 @router.post("/", response_model=Expense)
 def create_new_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
-    """Create a new expense transaction."""
+    """create a new expense transaction"""
     return crud_expense.create_expense(db=db, expense=expense)
 
 @router.get("/", response_model=List[Expense])
 def read_all_expenses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Retrieve all expense transactions."""
+    """retrieve all expense transactions"""
     return crud_expense.get_expenses(db, skip=skip, limit=limit)
 
 @router.get("/{expense_id}", response_model=Expense)
 def read_single_expense(expense_id: int, db: Session = Depends(get_db)):
-    """Retrieve a single expense transaction by its ID."""
+    """retrieve a single expense transaction by its id"""
     db_expense = crud_expense.get_expense(db, expense_id=expense_id)
     if db_expense is None:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -27,7 +27,7 @@ def read_single_expense(expense_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{expense_id}", response_model=Expense)
 def update_existing_expense(expense_id: int, expense: ExpenseUpdate, db: Session = Depends(get_db)):
-    """Update an expense transaction."""
+    """update an expense transaction"""
     db_expense = crud_expense.update_expense(db, expense_id, expense)
     if db_expense is None:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -35,7 +35,7 @@ def update_existing_expense(expense_id: int, expense: ExpenseUpdate, db: Session
 
 @router.delete("/{expense_id}", response_model=Expense)
 def delete_single_expense(expense_id: int, db: Session = Depends(get_db)):
-    """Delete an expense transaction."""
+    """delete an expense transaction"""
     db_expense = crud_expense.delete_expense(db, expense_id=expense_id)
     if db_expense is None:
         raise HTTPException(status_code=404, detail="Expense not found")

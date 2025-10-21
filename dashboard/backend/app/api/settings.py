@@ -19,7 +19,7 @@ def set_base_currency(payload: BaseCurrencyUpdate):
     """
     new = payload.base_currency.strip().upper()
     if not new:
-        raise HTTPException(status_code=400, detail="Invalid base_currency")
+        raise HTTPException(status_code=400, detail="wrong base_currency")
 
     # locate backend folder (two levels up from this file)
     this_dir = os.path.dirname(__file__)

@@ -5,7 +5,7 @@ from .category import Category
 from .account import Account
 
 class IncomeBase(BaseModel):
-    """Base schema for income data."""
+    """base schema for income data"""
     amount: Decimal
     currency: str
     description: str | None = None
@@ -14,15 +14,15 @@ class IncomeBase(BaseModel):
     account_id: int
 
 class IncomeCreate(IncomeBase):
-    """Schema for creating a new income transaction."""
+    """schema for creating a new income transaction"""
     pass
 
 class IncomeUpdate(IncomeBase):
-    """Schema for updating an income transaction."""
+    """schema for updating an income transaction"""
     pass
 
 class Income(IncomeBase):
-    """Schema for returning income data from the API."""
+    """schema for returning income data from the API"""
     id: int
     category: Category
     account: Account

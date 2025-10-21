@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class Expense(Base):
-    """Database model for an expense transaction."""
+    """db model for an expense transaction"""
     __tablename__ = "expenses"
 
     id = Column(Integer, primary_key=True, index=True)

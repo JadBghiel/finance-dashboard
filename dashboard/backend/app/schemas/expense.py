@@ -5,7 +5,7 @@ from .category import Category
 from .account import Account
 
 class ExpenseBase(BaseModel):
-    """Base schema for expense data."""
+    """base schema for expense data"""
     amount: Decimal
     currency: str
     description: str | None = None
@@ -14,15 +14,15 @@ class ExpenseBase(BaseModel):
     account_id: int
 
 class ExpenseCreate(ExpenseBase):
-    """Schema for creating a new expense transaction."""
+    """schema for creating a new expense transaction"""
     pass
 
 class ExpenseUpdate(ExpenseBase):
-    """Schema for updating an expense transaction."""
+    """schema for updating an expense transaction"""
     pass
 
 class Expense(ExpenseBase):
-    """Schema for returning expense data from the API."""
+    """schema for returning expense data from the API"""
     id: int
     category: Category
     account: Account
