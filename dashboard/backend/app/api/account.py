@@ -1,9 +1,12 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.schemas.account import Account, AccountCreate
+from decimal import Decimal
+from app.schemas.account import Account, AccountCreate, AccountBalance, CurrencyBreakdown
 from app.crud import account as crud_account
 from app.core.database import get_db
+from app.core import config
+from app.utils.exchange import get_rate
 
 router = APIRouter()
 
@@ -14,3 +17,45 @@ def create_new_account(account: AccountCreate, db: Session = Depends(get_db)):
 @router.get("/accounts/", response_model=List[Account])
 def read_all_accounts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_account.get_accounts(db, skip=skip, limit=limit)
+
+@router.get("/accounts/{account_id}/balance/", response_model=AccountBalance)
+def get_account_balance(account_id: int, db: Session = Depends(get_db)):
+    """
+    calculate account net per currency (incomes-expenses), convert each currency to base currency
+    using exchange utility (with caching and daily limit), returns breakdown and total in base currency
+    """
+    acc = crud_account.get_account(db, account_id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="account not found")
+
+    per_currency = crud_account.get_account_balance_per_currency(db, account_id)
+
+    base = config.BASE_CURRENCY.upper()
+    total_converted = Decimal("0")
+    any_conversion_ok = False
+    breakdown_items: List[CurrencyBreakdown] = []
+
+    for cur, amt in per_currency.items():
+        converted = None
+        if cur.upper() == base:
+            converted = amt
+            any_conversion_ok = True
+            total_converted += converted
+        else:
+            rate = get_rate(cur.upper(), base)
+            if rate is not None:
+                converted = (amt * Decimal(str(rate)))
+                any_conversion_ok = True
+                total_converted += converted
+            else:
+                converted = None
+        breakdown_items.append(CurrencyBreakdown(currency=cur.upper(), amount=amt, converted_amount=converted))
+
+    result_total = total_converted if any_conversion_ok else None
+
+    return AccountBalance(
+        account_id=account_id,
+        base_currency=base,
+        total_converted=result_total,
+        breakdown=breakdown_items
+    )

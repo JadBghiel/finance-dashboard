@@ -38,3 +38,6 @@ venv/
 
 # Misc
 *.log
+
+# specific to this project, the cache file for exchange rates
+.exchange_cache.json
