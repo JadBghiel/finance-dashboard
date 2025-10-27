@@ -1,3 +1,4 @@
+# maybe this file is useless
 import os
 from dotenv import load_dotenv
 

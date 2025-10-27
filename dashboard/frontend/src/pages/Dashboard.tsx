@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Grid, Card, CardContent, CircularProgress } from '@mui/material';
+import {
+  Typography, Box, FormControl, InputLabel, Select, MenuItem, Button,
+  Grid, Card, CardContent, CircularProgress
+} from '@mui/material';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import { getBaseCurrency, updateBaseCurrency } from '../services/settingsService';
 import { getAccounts, getAccountBalance } from '../services/accountService';
+import { getIncomes } from '../services/incomeService';
+import { getExpenses } from '../services/expenseService';
+import Charts from '../components/Dashboard/Charts';
+import { getColorForKey } from '../constants/colors';
 
 const currencyOptions = [
   { code: 'EUR', label: 'Euro' },
@@ -25,14 +32,19 @@ function Dashboard() {
   const [balances, setBalances] = useState<Record<number, any>>({});
   const [loadingBalances, setLoadingBalances] = useState(false);
 
+  const [incomes, setIncomes] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [loadingTx, setLoadingTx] = useState(false);
+
+  const [timeframe, setTimeframe] = useState<'day'|'week'|'month'|'quarter'|'year'>('month');
+  const [accountFilter, setAccountFilter] = useState<number| 'all' >('all');
+
   useEffect(() => {
     (async () => {
       try {
         const current = await getBaseCurrency();
         setBaseCurrency(current);
-      } catch (e) {
-        // ignore if backend not available
-      }
+      } catch (e) {}
     })();
 
     (async () => {
@@ -63,10 +75,31 @@ function Dashboard() {
     })();
   }, [accounts]);
 
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    setLoadingTx(true);
+    try {
+      const [incs, exps] = await Promise.all([getIncomes(), getExpenses()]);
+      setIncomes(incs);
+      setExpenses(exps);
+    } catch (e) {
+      setIncomes([]);
+      setExpenses([]);
+    } finally {
+      setLoadingTx(false);
+    }
+  };
+
   const save = async () => {
     setPending(true);
     try {
       await updateBaseCurrency(baseCurrency);
+      // re-fetch balances after change
+      const accs = await getAccounts();
+      setAccounts(accs);
     } finally {
       setPending(false);
     }
@@ -97,7 +130,7 @@ function Dashboard() {
       </Box>
 
       {loadingBalances ? <CircularProgress /> : (
-        <Grid container spacing={2}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
           {accounts.map((a) => {
             const b = balances[a.id];
             return (
@@ -144,6 +177,37 @@ function Dashboard() {
             );
           })}
         </Grid>
+      )}
+
+      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="timeframe-label">Timeframe</InputLabel>
+          <Select labelId="timeframe-label" value={timeframe} label="Timeframe" onChange={(e) => setTimeframe(e.target.value as any)}>
+            <MenuItem value="day">Day</MenuItem>
+            <MenuItem value="week">Week</MenuItem>
+            <MenuItem value="month">Month</MenuItem>
+            <MenuItem value="quarter">Quarter</MenuItem>
+            <MenuItem value="year">Year</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="account-filter-label">Filter account</InputLabel>
+          <Select labelId="account-filter-label" value={accountFilter} label="Filter account" onChange={(e) => setAccountFilter(e.target.value as any)}>
+            <MenuItem value="all">All accounts</MenuItem>
+            {accounts.map((a) => <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {loadingTx ? <CircularProgress /> : (
+        <Charts
+          incomes={incomes}
+          expenses={expenses}
+          timeframe={timeframe}
+          accountFilter={accountFilter}
+          getColorForKey={getColorForKey}
+        />
       )}
     </>
   );
