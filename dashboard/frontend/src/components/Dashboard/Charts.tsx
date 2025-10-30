@@ -8,25 +8,20 @@ import { getColorForKey } from '../../constants/colors';
 
 /**
  * charts implementation VIZ
- * for now:
- *  - incomes, expenses: arrays from API (with category.account info)
- *  - timeframe: 'day', 'week', 'month', 'quarter', 'year'
- *  - accountFilter: account id or 'all'
+ * props: incomes, expenses, timeframe, accountFilter
+ * improved bucket generation so charts update dynamically when timeframe/accountFilter change
  */
 export default function Charts({ incomes, expenses, timeframe, accountFilter, getColorForKey: _getColor }: any) {
-  // helpers
   const filterByAccount = (list: any[]) => {
     if (accountFilter === 'all') return list;
     return list.filter((t) => Number(t.account_id) === Number(accountFilter));
   };
 
-  const monthSlice = (list: any[]) => {
+  const filterByMonth = (list: any[]) => {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
     return list.filter((t) => {
       const d = new Date(t.date);
-      return d.getFullYear() === y && d.getMonth() === m;
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     });
   };
 
@@ -46,8 +41,8 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
   const incomesFiltered = useMemo(() => filterByAccount(incomes || []), [incomes, accountFilter]);
   const expensesFiltered = useMemo(() => filterByAccount(expenses || []), [expenses, accountFilter]);
 
-  const incomesThisMonth = useMemo(() => monthSlice(incomesFiltered), [incomesFiltered]);
-  const expensesThisMonth = useMemo(() => monthSlice(expensesFiltered), [expensesFiltered]);
+  const incomesThisMonth = useMemo(() => filterByMonth(incomesFiltered), [incomesFiltered]);
+  const expensesThisMonth = useMemo(() => filterByMonth(expensesFiltered), [expensesFiltered]);
 
   const incomeByCategory = useMemo(() => categorySums(incomesThisMonth), [incomesThisMonth]);
   const expenseByCategory = useMemo(() => categorySums(expensesThisMonth), [expensesThisMonth]);
@@ -55,88 +50,90 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
   const totalEarned = incomeByCategory.reduce((s, it) => s + it.value, 0);
   const totalSpent = expenseByCategory.reduce((s, it) => s + it.value, 0);
 
-  // timeframe aggregation for trends/wealth, buckets per timeframe label ig
+  // build time buckets correctly based on timeframe
   const buildTimeBuckets = (list: any[]) => {
     const now = new Date();
-    const buckets: Record<string, number> = {};
-
-    const add = (d: Date) => {
-      const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-      buckets[key] = 0;
-      return key;
-    };
+    const buckets: string[] = [];
+    const addLabel = (label: string) => { if (!buckets.includes(label)) buckets.push(label); };
 
     if (timeframe === 'day') {
-      // last 24h by date (USE DATE ONKY)
-      for (let i = 0; i < 7; i++) { // show last 7 days for small chart
-        const d = new Date(); d.setDate(now.getDate() - (6 - i));
-        add(d);
+      // last 7 days
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(now.getDate() - i);
+        addLabel(d.toISOString().slice(0,10)); // YYYY-MM-DD
       }
     } else if (timeframe === 'week') {
-      // last 8 weeks
-      for (let i = 0; i < 8; i++) {
-        const d = new Date(); d.setDate(now.getDate() - (7 * (7 - i)));
-        add(d);
+      // last 8 ISO weeks (label as YYYY-Www)
+      const msPerWeek = 7 * 24 * 3600 * 1000;
+      for (let i = 7; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * msPerWeek);
+        const week = getWeekLabel(d);
+        addLabel(week);
       }
     } else if (timeframe === 'month') {
-      // last 12 months
-      for (let i = 0; i < 12; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-        add(d);
+      // last 12 months label YYYY-MM
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        addLabel(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
       }
     } else if (timeframe === 'quarter') {
-      // last 4 quarters (4 months each for simplicity, using month start)
-      for (let i = 0; i < 4; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - (3 * (3 - i)), 1);
-        add(d);
+      // last 4 months (quarter as month-window)
+      for (let i = 3; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        addLabel(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
       }
     } else { // year
-      for (let i = 0; i < 12; i++) {
-        const d = new Date(now.getFullYear() - (11 - i), 0, 1);
-        add(d);
+      // last 5 years label YYYY
+      for (let i = 4; i >= 0; i--) {
+        const d = new Date(now.getFullYear() - i, 0, 1);
+        addLabel(String(d.getFullYear()));
       }
     }
 
-    // accumulate values
+    // initialize map
+    const map: Record<string, number> = {};
+    buckets.forEach((k) => map[k] = 0);
+
+    // helper to find bucket for a date
+    const findBucket = (d: Date) => {
+      if (timeframe === 'day') return d.toISOString().slice(0,10);
+      if (timeframe === 'week') return getWeekLabel(d);
+      if (timeframe === 'month' || timeframe === 'quarter') return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      return String(d.getFullYear());
+    };
+
     for (const t of list) {
       const d = new Date(t.date);
-      // find nearest bucket: for month/year use month key, else date
-      let key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-      if (!(key in buckets)) {
-        // fallback: find closest bucket by comparing time
-        const keys = Object.keys(buckets);
-        let closest = keys[0];
-        let minDiff = Math.abs(new Date(keys[0]).getTime() - d.getTime());
-        for (const k of keys) {
+      const key = findBucket(d);
+      if (key in map) map[key] += Number(t.amount);
+      else {
+        // find nearest bucket (fallback)
+        let nearest = buckets[0];
+        let minDiff = Math.abs(new Date(buckets[0]).getTime() - d.getTime());
+        for (const k of buckets) {
           const kd = new Date(k);
           const diff = Math.abs(kd.getTime() - d.getTime());
-          if (diff < minDiff) { minDiff = diff; closest = k; }
+          if (diff < minDiff) { minDiff = diff; nearest = k; }
         }
-        key = closest;
+        map[nearest] += Number(t.amount);
       }
-      buckets[key] = (buckets[key] || 0) + Number(t.amount);
     }
 
-    return Object.entries(buckets).map(([k, v]) => ({ label: k, value: v }));
+    return Object.entries(map).map(([k,v]) => ({ label: k, value: v }));
   };
 
-  const incomeTrend = useMemo(() => buildTimeBuckets(incomesFiltered), [incomesFiltered, timeframe]);
-  const expenseTrend = useMemo(() => buildTimeBuckets(expensesFiltered), [expensesFiltered, timeframe]);
+  const incomeTrend = useMemo(() => buildTimeBuckets(incomesFiltered), [incomesFiltered, timeframe, accountFilter]);
+  const expenseTrend = useMemo(() => buildTimeBuckets(expensesFiltered), [expensesFiltered, timeframe, accountFilter]);
 
-  // wealth progression: net per timeframe bucket (income - expense)
-  const allTx = useMemo(() => {
-    const arr = [...(incomesFiltered || []).map((i:any) => ({ ...i, _t: 'inc' })), ...(expensesFiltered || []).map((e:any) => ({ ...e, _t: 'exp' }))];
-    return arr;
-  }, [incomesFiltered, expensesFiltered]);
-
+  // wealth progression: income - expense per bucket
   const wealthBuckets = useMemo(() => {
     const inc = buildTimeBuckets(incomesFiltered);
     const exp = buildTimeBuckets(expensesFiltered);
-    const map: Record<string, any> = {};
-    for (const it of inc) map[it.label] = (map[it.label] || 0) + it.value;
-    for (const it of exp) map[it.label] = (map[it.label] || 0) - it.value;
-    return Object.entries(map).map(([k, v]) => ({ label: k, value: v }));
-  }, [incomesFiltered, expensesFiltered, timeframe]);
+    const map: Record<string, number> = {};
+    inc.forEach(it => map[it.label] = (map[it.label] || 0) + it.value);
+    exp.forEach(it => map[it.label] = (map[it.label] || 0) - it.value);
+    return Object.entries(map).map(([k,v]) => ({ label: k, value: v }));
+  }, [incomesFiltered, expensesFiltered, timeframe, accountFilter]);
 
   const colorFor = (keyPrefix: string, id: string) => {
     return _getColor ? _getColor(`${keyPrefix}:${id}`) : getColorForKey(`${keyPrefix}:${id}`);
@@ -148,13 +145,13 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6">EARNED</Typography>
+              <Typography variant="h6">💸 EARNED</Typography>
               <Typography variant="subtitle2">You earned {totalEarned.toFixed(2)} — here’s how:</Typography>
               <Box sx={{ height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={incomeByCategory} dataKey="value" nameKey="name" outerRadius={90} label>
-                      {incomeByCategory.map((entry, idx) => (
+                      {incomeByCategory.map((entry) => (
                         <Cell key={entry.id} fill={colorFor('cat', entry.id)} />
                       ))}
                     </Pie>
@@ -170,13 +167,13 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6">SPENT</Typography>
+              <Typography variant="h6">🧾 SPENT</Typography>
               <Typography variant="subtitle2">You spent {totalSpent.toFixed(2)} — here’s how:</Typography>
               <Box sx={{ height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={expenseByCategory} dataKey="value" nameKey="name" outerRadius={90} label>
-                      {expenseByCategory.map((entry, idx) => (
+                      {expenseByCategory.map((entry) => (
                         <Cell key={entry.id} fill={colorFor('cat', entry.id)} />
                       ))}
                     </Pie>
@@ -244,4 +241,15 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
       </Grid>
     </Box>
   );
+}
+
+// helper to produce ISO week label YYYY-Www
+function getWeekLabel(d: Date) {
+  // compute ISO week number
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
+  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
 }

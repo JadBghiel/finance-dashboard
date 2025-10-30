@@ -170,7 +170,7 @@ function Expense() {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography variant="h4">Expense Transactions</Typography>
+        <Typography variant="h4">🧾 Expense Transactions</Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <TextField

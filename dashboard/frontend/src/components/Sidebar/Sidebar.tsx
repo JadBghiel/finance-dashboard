@@ -8,9 +8,9 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 const drawerWidth = 240;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-  { text: 'Income', icon: <TrendingUpIcon />, path: '/income' },
-  { text: 'Expense', icon: <TrendingDownIcon />, path: '/expense' },
+  { text: '📊 Dashboard', icon: <DashboardIcon />, path: '/' },
+  { text: '💸 Income', icon: <TrendingUpIcon />, path: '/income' },
+  { text: '🧾 Expense', icon: <TrendingDownIcon />, path: '/expense' },
 ];
 
 function Sidebar() {
