@@ -33,5 +33,5 @@ npm start
 You can use the python script to generate entries for both INCOME and EXPENSES, and test the project
 
 In the root of the project (with python activated or installed):
- ``` python3 dashbaord/backend/scripts/seed_transactions.py --incomes <amount> --expenses <amount> ``` 
+ ``` python3 dashboard/backend/scripts/seed_transactions.py --incomes <amount> --expenses <amount> ``` 
 
