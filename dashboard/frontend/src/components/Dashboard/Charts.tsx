@@ -38,14 +38,73 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
     });
   };
 
+  // build bucket labels helper extracted (used both for chart buckets and timeframe filtering)
+  const getBucketLabels = (tf: string) => {
+    const now = new Date();
+    const buckets: string[] = [];
+    const addLabel = (label: string) => { if (!buckets.includes(label)) buckets.push(label); };
+
+    if (tf === 'day') {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(now.getDate() - i);
+        addLabel(d.toISOString().slice(0,10));
+      }
+    } else if (tf === 'week') {
+      const msPerWeek = 7 * 24 * 3600 * 1000;
+      for (let i = 7; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * msPerWeek);
+        addLabel(getWeekLabel(d));
+      }
+    } else if (tf === 'month') {
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        addLabel(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      }
+    } else if (tf === 'quarter') {
+      for (let i = 3; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        addLabel(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      }
+    } else { // year
+      for (let i = 4; i >= 0; i--) {
+        const d = new Date(now.getFullYear() - i, 0, 1);
+        addLabel(String(d.getFullYear()));
+      }
+    }
+    return buckets;
+  };
+
+  // helper to find bucket for a date (copied from buildTimeBuckets)
+  const findBucket = (d: Date) => {
+    if (timeframe === 'day') return d.toISOString().slice(0,10);
+    if (timeframe === 'week') return getWeekLabel(d);
+    if (timeframe === 'month' || timeframe === 'quarter') return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    return String(d.getFullYear());
+  };
+
+  // timeframe-aware filter for category pies (not only current month)
+  const filterByTimeframe = (list: any[]) => {
+    const labels = getBucketLabels(timeframe);
+    return list.filter((t) => {
+      try {
+        const d = new Date(t.date);
+        const key = findBucket(d);
+        return labels.includes(key);
+      } catch (e) {
+        return false;
+      }
+    });
+  };
+
   const incomesFiltered = useMemo(() => filterByAccount(incomes || []), [incomes, accountFilter]);
   const expensesFiltered = useMemo(() => filterByAccount(expenses || []), [expenses, accountFilter]);
 
-  const incomesThisMonth = useMemo(() => filterByMonth(incomesFiltered), [incomesFiltered]);
-  const expensesThisMonth = useMemo(() => filterByMonth(expensesFiltered), [expensesFiltered]);
+  // use timeframe-aware filter for category pies
+  const incomesInRange = useMemo(() => filterByTimeframe(incomesFiltered), [incomesFiltered, timeframe, accountFilter]);
+  const expensesInRange = useMemo(() => filterByTimeframe(expensesFiltered), [expensesFiltered, timeframe, accountFilter]);
 
-  const incomeByCategory = useMemo(() => categorySums(incomesThisMonth), [incomesThisMonth]);
-  const expenseByCategory = useMemo(() => categorySums(expensesThisMonth), [expensesThisMonth]);
+  const incomeByCategory = useMemo(() => categorySums(incomesInRange), [incomesInRange]);
+  const expenseByCategory = useMemo(() => categorySums(expensesInRange), [expensesInRange]);
 
   const totalEarned = incomeByCategory.reduce((s, it) => s + it.value, 0);
   const totalSpent = expenseByCategory.reduce((s, it) => s + it.value, 0);
@@ -94,14 +153,6 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
     const map: Record<string, number> = {};
     buckets.forEach((k) => map[k] = 0);
 
-    // helper to find bucket for a date
-    const findBucket = (d: Date) => {
-      if (timeframe === 'day') return d.toISOString().slice(0,10);
-      if (timeframe === 'week') return getWeekLabel(d);
-      if (timeframe === 'month' || timeframe === 'quarter') return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      return String(d.getFullYear());
-    };
-
     for (const t of list) {
       const d = new Date(t.date);
       const key = findBucket(d);
@@ -147,15 +198,21 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
             <CardContent>
               <Typography variant="h6">💸 EARNED</Typography>
               <Typography variant="subtitle2">You earned {totalEarned.toFixed(2)} — here’s how:</Typography>
-              <Box sx={{ height: 280 }}>
+              <Box sx={{ height: 360 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={incomeByCategory} dataKey="value" nameKey="name" outerRadius={90} label>
+                    <Pie
+                      data={incomeByCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={110}
+                      label={(entry: any) => `${entry.name} (${Number(entry.value).toFixed(2)})`}
+                    >
                       {incomeByCategory.map((entry) => (
                         <Cell key={entry.id} fill={colorFor('cat', entry.id)} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value: any) => Number(value).toFixed(2)} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -169,15 +226,21 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
             <CardContent>
               <Typography variant="h6">🧾 SPENT</Typography>
               <Typography variant="subtitle2">You spent {totalSpent.toFixed(2)} — here’s how:</Typography>
-              <Box sx={{ height: 280 }}>
+              <Box sx={{ height: 360 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={expenseByCategory} dataKey="value" nameKey="name" outerRadius={90} label>
+                    <Pie
+                      data={expenseByCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={110}
+                      label={(entry: any) => `${entry.name} (${Number(entry.value).toFixed(2)})`}
+                    >
                       {expenseByCategory.map((entry) => (
                         <Cell key={entry.id} fill={colorFor('cat', entry.id)} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value: any) => Number(value).toFixed(2)} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -197,7 +260,7 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value: any) => Number(value).toFixed(2)} />
                     <Bar dataKey="value" fill="#1976d2" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -216,7 +279,7 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value: any) => Number(value).toFixed(2)} />
                     <Bar dataKey="value" fill="#4caf50" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -229,7 +292,7 @@ export default function Charts({ incomes, expenses, timeframe, accountFilter, ge
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value: any) => Number(value).toFixed(2)} />
                     <Bar dataKey="value" fill="#f44336" />
                   </BarChart>
                 </ResponsiveContainer>

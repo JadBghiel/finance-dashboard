@@ -91,7 +91,7 @@ function ExpenseList({ expenses, onEdit, onDelete, sortKey, sortDir, onRequestSo
                 <TableCell>{expense.description}</TableCell>
                 <TableCell>{expense.category.name}</TableCell>
                 <TableCell>{expense.account.name}</TableCell>
-                <TableCell align="right">{`${symbol} ${expense.amount} ${expense.currency}`}</TableCell>
+                <TableCell align="right">{`${symbol} ${Number(expense.amount).toFixed(2)} ${expense.currency}`}</TableCell>
                 <TableCell align="right">
                   <Box>
                     <IconButton size="small" aria-label="edit" onClick={() => onEdit && onEdit(expense)}>

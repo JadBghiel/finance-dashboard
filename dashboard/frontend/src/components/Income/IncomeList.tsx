@@ -90,7 +90,7 @@ function IncomeList({ incomes, onEdit, onDelete, sortKey, sortDir, onRequestSort
                 <TableCell>{income.description}</TableCell>
                 <TableCell>{income.category.name}</TableCell>
                 <TableCell>{income.account.name}</TableCell>
-                <TableCell align="right">{`${symbol} ${income.amount} ${income.currency}`}</TableCell>
+                <TableCell align="right">{`${symbol} ${Number(income.amount).toFixed(2)} ${income.currency}`}</TableCell>
                 <TableCell align="right">
                   <Box>
                     <IconButton size="small" aria-label="edit" onClick={() => onEdit && onEdit(income)}>
