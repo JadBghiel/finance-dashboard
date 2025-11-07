@@ -1,8 +1,8 @@
 import api from './api';
 import { Expense, ExpenseCreate } from '../types';
 
-export const getExpenses = async (): Promise<Expense[]> => {
-  const response = await api.get('/expenses/');
+export const getExpenses = async (skip = 0, limit = 100): Promise<Expense[]> => {
+  const response = await api.get('/expenses/', { params: { skip, limit } });
   return response.data;
 };
 

@@ -23,6 +23,9 @@ function Income() {
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
+  const [page, setPage] = useState<number>(0);
+  const [pageSize] = useState<number>(100); // page size used for skip/limit
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -34,11 +37,18 @@ function Income() {
     return () => clearTimeout(t);
   }, [searchQuery, incomes]);
 
-  const fetchIncomeData = async () => {
-    const incomesData = await getIncomes();
+  const fetchIncomeData = async (p = page) => {
+    // use skip/limit for server-side pagination
+    const skip = p * pageSize;
+    const incomesData = await getIncomes(skip, pageSize);
     setIncomes(incomesData);
     applyFilter(searchQuery, incomesData);
   };
+
+  // refetch incomes when page changes
+  useEffect(() => {
+    fetchIncomeData(page);
+  }, [page]);
 
   const fetchCategoryData = async () => {
     const categoriesData = await getCategories('income');
@@ -51,7 +61,7 @@ function Income() {
   };
 
   const fetchData = () => {
-    fetchIncomeData();
+    fetchIncomeData(0); // ensure first page for categories/accounts load
     fetchCategoryData();
     fetchAccountData();
   };
@@ -92,7 +102,8 @@ function Income() {
     } else {
       await createIncome(newIncome);
     }
-    fetchIncomeData();
+    // refresh current page
+    fetchIncomeData(page);
   };
 
   const handleEdit = (income: IncomeType) => {
@@ -206,6 +217,24 @@ function Income() {
         sortDir={sortDir}
         onRequestSort={handleRequestSort}
       />
+
+      {/* pagination controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mt: 2 }}>
+        <Button variant="outlined" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+          Previous
+        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography>Page {page + 1}</Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={() => setPage((p) => p + 1)}
+          // disable next when fewer than pageSize items were returned (last page)
+          disabled={incomes.length < pageSize}
+        >
+          Next
+        </Button>
+      </Box>
 
       <AddIncomeForm
         open={isFormOpen}

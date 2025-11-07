@@ -1,8 +1,8 @@
 import api from './api';
 import { Income, IncomeCreate } from '../types';
 
-export const getIncomes = async (): Promise<Income[]> => {
-  const response = await api.get('/incomes/');
+export const getIncomes = async (skip = 0, limit = 100): Promise<Income[]> => {
+  const response = await api.get('/incomes/', { params: { skip, limit } });
   return response.data;
 };
 

@@ -23,6 +23,10 @@ function Expense() {
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
+  // pagination state added
+  const [page, setPage] = useState<number>(0);
+  const [pageSize] = useState<number>(100);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -34,11 +38,18 @@ function Expense() {
     return () => clearTimeout(t);
   }, [searchQuery, expenses]);
 
-  const fetchExpenseData = async () => {
-    const data = await getExpenses();
+  // use skip/limit for server-side pagination
+  const fetchExpenseData = async (p = page) => {
+    const skip = p * pageSize;
+    const data = await getExpenses(skip, pageSize);
     setExpenses(data);
     applyFilter(searchQuery, data);
   };
+
+  // refetch when page changes
+  useEffect(() => {
+    fetchExpenseData(page);
+  }, [page]);
 
   const fetchCategoryData = async () => {
     const categoriesData = await getCategories('expense');
@@ -51,7 +62,7 @@ function Expense() {
   };
 
   const fetchData = () => {
-    fetchExpenseData();
+    fetchExpenseData(0);
     fetchCategoryData();
     fetchAccountData();
   };
@@ -92,7 +103,8 @@ function Expense() {
     } else {
       await createExpense(newExpense);
     }
-    fetchExpenseData();
+    // refresh current page
+    fetchExpenseData(page);
   };
 
   const handleEdit = (expense: ExpenseType) => {
@@ -206,6 +218,23 @@ function Expense() {
         sortDir={sortDir}
         onRequestSort={handleRequestSort}
       />
+
+      {/* pagination controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mt: 2 }}>
+        <Button variant="outlined" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+          Previous
+        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography>Page {page + 1}</Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={() => setPage((p) => p + 1)}
+          disabled={expenses.length < pageSize}
+        >
+          Next
+        </Button>
+      </Box>
 
       <AddExpenseForm
         open={isFormOpen}

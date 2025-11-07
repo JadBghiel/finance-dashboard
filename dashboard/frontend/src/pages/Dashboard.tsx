@@ -247,7 +247,7 @@ function Dashboard() {
                           <Box key={it.currency} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                             <Typography variant="body2">{it.currency}</Typography>
                             <Typography variant="body2">
-                              {it.amount !== null ? `${it.amount} ${it.currency}` : '-'}
+                              {it.amount !== null ? `${Number(it.amount).toFixed(2)} ${it.currency}` : '-'}
                               {it.converted_amount !== null ? ` → ${b.base_currency} ${Number(it.converted_amount).toFixed(2)}` : ''}
                             </Typography>
                           </Box>
