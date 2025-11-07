@@ -19,6 +19,9 @@ from datetime import datetime, timedelta
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'finance.db'))
 
+# control how far back to seed in days, default 10 years
+DAYS_BACK = 3650
+
 CURRENCIES = ['EUR', 'USD', 'GBP', 'JPY', 'CAD', 'MAD', 'AED', 'AUD', 'CHF', 'CNY']
 
 INCOME_CATEGORIES = [
@@ -126,15 +129,115 @@ def insert_expense(conn: sqlite3.Connection, amount: Decimal, currency: str, des
         (str(amount), currency, description, date_iso, category_id, account_id)
     )
 
-def random_past_date(days_back=365):
+def random_past_date(days_back=DAYS_BACK):
+    """
+    return an ISO timestamp randomly chosen in the past "days_back" days
+    default uses DAYS_BACK so gen entries are spread across multiple years
+    uses standard ISO T separator (datetime.isoformat) so JS/SQL parsing is consistent
+    """
     d = datetime.now() - timedelta(days=random.randint(0, days_back))
-    return d.replace(hour=12, minute=0, second=0, microsecond=0).isoformat(sep=' ')
+    return d.replace(hour=12, minute=0, second=0, microsecond=0).isoformat()  # ISO with 'T'
+
+def delete_entries(conn: sqlite3.Connection, count: int, table: str = 'both', randomize: bool = False) -> int:
+    """
+    delete `count` entries from the db
+    - table: 'incomes', 'expenses' or 'both'
+    - randomize: if true delete random rows, otherwise delete newest (by id desc)
+    returns number of rows deleted
+    """
+    cur = conn.cursor()
+
+    valid_tables = {'incomes', 'expenses', 'both'}
+    t = table.lower()
+    if t not in valid_tables:
+        raise ValueError("table must be 'incomes', 'expenses' or 'both'")
+
+    # fetch candidate rows (returns list of (id, table_name))
+    def fetch_candidates():
+        if t == 'incomes':
+            rows = cur.execute("SELECT id FROM incomes").fetchall()
+            return [(r[0], 'incomes') for r in rows]
+        if t == 'expenses':
+            rows = cur.execute("SELECT id FROM expenses").fetchall()
+            return [(r[0], 'expenses') for r in rows]
+        # both
+        rows_inc = cur.execute("SELECT id FROM incomes").fetchall()
+        rows_exp = cur.execute("SELECT id FROM expenses").fetchall()
+        return [(r[0], 'incomes') for r in rows_inc] + [(r[0], 'expenses') for r in rows_exp]
+
+    candidates = fetch_candidates()
+    total_available = len(candidates)
+    if total_available == 0:
+        return 0
+
+    # choose rows to delete
+    if randomize:
+        import random as _random
+        to_delete = _random.sample(candidates, min(count, total_available))
+    else:
+        # delete newest by id (descending)
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        to_delete = candidates[:min(count, total_available)]
+
+    # confirmation prompt
+    print(f"about to delete {len(to_delete)} rows (table={table}, random={randomize}).")
+    ok = input("aree you sure? type yes to proceed: ").strip().lower()
+    if ok != 'yes':
+        print("annulé by user")
+        return 0
+
+    deleted = 0
+    for rid, tbl in to_delete:
+        # delete by id per-table
+        cur.execute(f"DELETE FROM {tbl} WHERE id = ?", (rid,))
+        deleted += cur.rowcount if cur.rowcount is not None else 1
+
+    conn.commit()
+    return deleted
 
 def main():
+    import sys
     p = argparse.ArgumentParser(description="Seed finance.db with random incomes and expenses.")
     p.add_argument("--incomes", type=int, default=20, help="Number of income entries to create")
     p.add_argument("--expenses", type=int, default=10, help="Number of expense entries to create")
-    args = p.parse_args()
+    p.add_argument("--years", type=int, default=None, help="Spread entries across N years (overrides internal DAYS_BACK when provided)")
+    args, unknown = p.parse_known_args()
+
+    if len(sys.argv) > 1 and sys.argv[1] == 'delete':
+        # parse simple delete args
+        delete_count = 0
+        try:
+            delete_count = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+        except Exception:
+            print("Usage: python3 scripts/seed_transactions.py delete <count> [--random] [--table incomes|expenses|both]")
+            return
+
+        randomize = '--random' in sys.argv or '-r' in sys.argv
+        table = 'both'
+        if '--table' in sys.argv:
+            idx = sys.argv.index('--table')
+            if idx + 1 < len(sys.argv):
+                table = sys.argv[idx + 1]
+        elif '-t' in sys.argv:
+            idx = sys.argv.index('-t')
+            if idx + 1 < len(sys.argv):
+                table = sys.argv[idx + 1]
+
+        if not os.path.exists(DB_PATH):
+            print(f"DB not found at {DB_PATH}")
+            return
+
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            deleted = delete_entries(conn, delete_count, table=table, randomize=randomize)
+            print(f"Deleted {deleted} rows.")
+        finally:
+            conn.close()
+        return
+
+    days_back = DAYS_BACK
+    if args.years and args.years > 0:
+        days_back = args.years * 365
 
     if not os.path.exists(DB_PATH):
         print(f"DB not found at {DB_PATH}")
@@ -170,12 +273,11 @@ def main():
 
         # insert incomes
         incomes_total = Decimal("0")
-        incomes = []
         for _ in range(args.incomes):
             amt = quantize_amount(random.uniform(1, 1000))
             curc = random.choice(CURRENCIES)
             desc = random.choice(LOREM)
-            date_iso = random_past_date(365)
+            date_iso = random_past_date(days_back)
             cat = random.choice(INCOME_CATEGORIES)
             acc = random.choice(list(account_name_to_id.keys()))
             cid = category_name_to_id[cat]
@@ -183,7 +285,6 @@ def main():
 
             insert_income(conn, amt, curc, desc, date_iso, cid, aid)
             incomes_total += amt
-            incomes.append(amt)
 
         conn.commit()
 
@@ -208,7 +309,7 @@ def main():
             # pick random currency, description, date, category, account
             curc = random.choice(CURRENCIES)
             desc = random.choice(LOREM)
-            date_iso = random_past_date(365)
+            date_iso = random_past_date(days_back)
             cat = random.choice(EXPENSE_CATEGORIES)
             acc = random.choice(list(account_name_to_id.keys()))
             cid = category_name_to_id[cat]
@@ -225,13 +326,15 @@ def main():
                 if new_amt < Decimal("0.01"):
                     new_amt = Decimal("1.00")
                 # update last row: find last inserted rowid for expenses
-                last_id = conn.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1").fetchone()[0]
-                conn.execute("UPDATE expenses SET amount = ? WHERE id = ?", (str(new_amt), last_id))
-                expenses_total = expenses_total - (amt - new_amt)
+                last_id_row = conn.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1").fetchone()
+                if last_id_row:
+                    last_id = last_id_row[0]
+                    conn.execute("UPDATE expenses SET amount = ? WHERE id = ?", (str(new_amt), last_id))
+                    expenses_total = expenses_total - (amt - new_amt)
 
         conn.commit()
 
-        print("Seeding complete.")
+        print("Seeding complete")
         print(f"Inserted incomes: {args.incomes}, total incomes = {incomes_total}")
         print(f"Inserted expenses: {args.expenses}, total expenses = {expenses_total}")
         print(f"DB path: {DB_PATH}")

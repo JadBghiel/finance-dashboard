@@ -1,5 +1,5 @@
 # finance-dashboard
-💰 Personal Finance Dashboard / Track income, expenses, savings, and investments with charts, AI assistant, and multi-currency support.
+💰 Personal Finance Dashboard / Track income, expenses, savings, and investments with charts, AI assistant, and multi-currency support
 ![alt text](image.png)
 
 ## LAUNCH
@@ -7,6 +7,7 @@
 you will need 2 terminal
  ```
  // in ./backend
+ 
 uvicorn app.main:app --reload
 // if you dont have python:
 python3 -m venv venv 
@@ -36,3 +37,6 @@ You can use the python script to generate entries for both INCOME and EXPENSES, 
 In the root of the project (with python activated or installed):
  ``` python3 dashboard/backend/scripts/seed_transactions.py --incomes <amount> --expenses <amount> ``` 
 
+delete entries:
+``` python3 dashboard/backend/scripts/seed_transactions.py delete <count> [--random] --table <both> OR <expenses> OR <incomes> ```
+if the ```--random``` arg is not specified it will delete the newest entries
