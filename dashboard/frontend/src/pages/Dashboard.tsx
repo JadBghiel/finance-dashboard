@@ -24,22 +24,7 @@ const currencyOptions = [
   { code: 'CNY', label: 'Chinese Renminbi' },
 ];
 
-// emojis per account name
-const ACCOUNT_EMOJI: Record<string, string> = {
-  Main: '🏦',
-  Savings: '💰',
-  'High Yield Savings Accounts': '📈',
-  Joint: '👥',
-  'Emergency Fund': '🛟',
-  'Christmas Club': '🎄',
-  'Vacation Club': '🏖️',
-  'Wedding Fund': '💍',
-  Pension: '🧾',
-  'Health Savings': '🏥',
-  'New Car': '🚗',
-  Parents: '👨‍👩‍👧',
-};
-
+// helper to truncate long descriptions
 function truncate(str: string | null | undefined, n = 50) {
   if (!str) return '';
   return str.length > n ? str.slice(0, n - 1) + '…' : str;
@@ -217,7 +202,11 @@ function Dashboard() {
         <Grid container spacing={2} sx={{ mb: 3 }}>
           {accounts.map((a) => {
             const b = balances[a.id];
-            const emoji = ACCOUNT_EMOJI[a.name] ?? '🏷️';
+            const emoji = a.emoji ?? '🏷️';
+            // compute sum of raw amounts in breakdown to detect truly-empty accounts
+            const breakdownSum = b && Array.isArray(b.breakdown)
+              ? b.breakdown.reduce((s: number, it: any) => s + (it.amount !== null && it.amount !== undefined ? Number(it.amount) : 0), 0)
+              : null;
             return (
               <Grid item key={a.id} xs={12} md={6} lg={4}>
                 <Card>
@@ -231,9 +220,11 @@ function Dashboard() {
                         {b ? (
                           b.total_converted !== null ? (
                             <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{`${Number(b.total_converted).toFixed(2)} ${b.base_currency}`}</Typography>
+                          ) : (breakdownSum === 0 ? (
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{`0 ${b.base_currency}`}</Typography>
                           ) : (
                             <Typography variant="body2">Conversion unavailable</Typography>
-                          )
+                          ))
                         ) : (
                           <Typography variant="body2">No data</Typography>
                         )}
