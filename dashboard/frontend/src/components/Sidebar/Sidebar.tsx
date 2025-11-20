@@ -4,6 +4,8 @@ import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } fr
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import AccountBoxIcon from '@mui/icons-material/AccountBox'; // EDIT: added icon for Accounts
+import CategoryIcon from '@mui/icons-material/Category'; // EDIT: added icon for Categories
 
 const drawerWidth = 240;
 
@@ -11,6 +13,8 @@ const menuItems = [
   { text: '📊 Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: '💸 Income', icon: <TrendingUpIcon />, path: '/income' },
   { text: '🧾 Expense', icon: <TrendingDownIcon />, path: '/expense' },
+  { text: '🏧 Accounts', icon: <AccountBoxIcon />, path: '/accounts' },
+  { text: '🏷️ Categories', icon: <CategoryIcon />, path: '/categories' },
 ];
 
 function Sidebar() {
