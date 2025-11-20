@@ -241,22 +241,7 @@ function Dashboard() {
                     </Box>
 
                     <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2">Breakdown</Typography>
-                      {b && b.breakdown && b.breakdown.length ? (
-                        b.breakdown.map((it: any) => (
-                          <Box key={it.currency} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                            <Typography variant="body2">{it.currency}</Typography>
-                            <Typography variant="body2">
-                              {it.amount !== null ? `${Number(it.amount).toFixed(2)} ${it.currency}` : '-'}
-                              {it.converted_amount !== null ? ` → ${b.base_currency} ${Number(it.converted_amount).toFixed(2)}` : ''}
-                            </Typography>
-                          </Box>
-                        ))
-                      ) : (
-                        <Typography variant="body2">No currency transactions</Typography>
-                      )}
-
-                      <Box sx={{ mt: 1 }}>
+                      <Box>
                         <Typography variant="subtitle2">Recent transactions</Typography>
                         {recentTxForAccount(a.id, 5).length ? (
                           recentTxForAccount(a.id, 5).map((t:any) => (
