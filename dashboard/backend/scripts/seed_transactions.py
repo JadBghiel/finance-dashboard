@@ -114,7 +114,12 @@ def get_or_create_account(conn: sqlite3.Connection, name: str) -> int:
     r = cur.fetchone()
     if r:
         return r[0]
-    cur = conn.execute("INSERT INTO accounts (name) VALUES (?)", (name,))
+    # insert emoji column if present in schema (set to NULL by default)
+    try:
+        cur = conn.execute("INSERT INTO accounts (name, emoji) VALUES (?, ?)", (name, None))
+    except sqlite3.OperationalError:
+        # fallback if emoji column not present
+        cur = conn.execute("INSERT INTO accounts (name) VALUES (?)", (name,))
     return cur.lastrowid
 
 def insert_income(conn: sqlite3.Connection, amount: Decimal, currency: str, description: str, date_iso: str, category_id: int, account_id: int):

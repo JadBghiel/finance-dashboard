@@ -7,6 +7,7 @@ export interface Category {
 export interface Account {
   id: number;
   name: string;
+  emoji?: string; // added
 }
 
 export interface Income {

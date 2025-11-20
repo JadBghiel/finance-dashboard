@@ -18,6 +18,20 @@ def create_new_account(account: AccountCreate, db: Session = Depends(get_db)):
 def read_all_accounts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_account.get_accounts(db, skip=skip, limit=limit)
 
+@router.put("/accounts/{account_id}/", response_model=Account)
+def update_existing_account(account_id: int, account: AccountCreate, db: Session = Depends(get_db)):
+    acc = crud_account.update_account(db, account_id, account.dict(exclude_unset=True))
+    if not acc:
+        raise HTTPException(status_code=404, detail="account not found")
+    return acc
+
+@router.delete("/accounts/{account_id}/", status_code=204)
+def delete_existing_account(account_id: int, db: Session = Depends(get_db)):
+    ok = crud_account.delete_account(db, account_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="account not found")
+    return None
+
 @router.get("/accounts/{account_id}/balance/", response_model=AccountBalance)
 def get_account_balance(account_id: int, db: Session = Depends(get_db)):
     """

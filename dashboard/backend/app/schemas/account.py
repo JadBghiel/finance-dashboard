@@ -4,6 +4,7 @@ from decimal import Decimal
 
 class AccountBase(BaseModel):
     name: str
+    emoji: str | None = None  # added
 
 class AccountCreate(AccountBase):
     pass

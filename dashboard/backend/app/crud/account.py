@@ -13,11 +13,32 @@ def get_accounts(db: Session, skip: int = 0, limit: int = 100):
     return db.query(AccountModel).offset(skip).limit(limit).all()
 
 def create_account(db: Session, account: AccountCreate):
-    db_account = AccountModel(name=account.name)
+    db_account = AccountModel(name=account.name, emoji=getattr(account, 'emoji', None))
     db.add(db_account)
     db.commit()
     db.refresh(db_account)
     return db_account
+
+def update_account(db: Session, account_id: int, data: dict):
+    acc = get_account(db, account_id)
+    if not acc:
+        return None
+    if 'name' in data:
+        acc.name = data['name']
+    if 'emoji' in data:
+        acc.emoji = data['emoji']
+    db.add(acc)
+    db.commit()
+    db.refresh(acc)
+    return acc
+
+def delete_account(db: Session, account_id: int):
+    acc = get_account(db, account_id)
+    if not acc:
+        return False
+    db.delete(acc)
+    db.commit()
+    return True
 
 def get_account_balance_per_currency(db: Session, account_id: int) -> dict[str, Decimal]:
     """

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import category, income, expense, account, settings
+from sqlalchemy import text
+from app.core.database import engine
 
 app = FastAPI(
     title="Personal Finance Dashboard API",
@@ -20,6 +22,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ensure emoji columns exist in DB at startup (safe: ALTER TABLE ADD COLUMN is no-op if column exists will raise -> caught)
+def _ensure_emoji_columns():
+    try:
+        with engine.connect() as conn:
+            # only ensure accounts emoji column (categories emoji removed)
+            try:
+                conn.execute(text("ALTER TABLE accounts ADD COLUMN emoji VARCHAR"))
+            except Exception:
+                pass
+    except Exception:
+        # best-effort only; don't break startup if engine not available
+        pass
+
+
+@app.on_event("startup")
+def _on_startup():
+    _ensure_emoji_columns()
 
 # by using include_router this way, FastAPI handles the trailing slash automatically
 app.include_router(category.router, prefix="/api", tags=["Categories"])
