@@ -2,7 +2,11 @@
 💰 Personal Finance Dashboard / Track income, expenses, savings, and investments with charts, AI assistant, and multi-currency support
 ![alt text](image.png)
 
-## Requirements
+
+## Access the project online
+This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-frontend-xi.vercel.app)
+
+## Requirements (local access)
 
 This project has a backend (Python/FastAPI) and a frontend (React). Before running the project, make sure you have the following installed and configured.
 
