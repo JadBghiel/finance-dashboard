@@ -63,6 +63,8 @@ In the root of the project:
     - Provided with the user data
     - Fine tuned to give recommendations, make projections, budgets, tax plannning, retirement planning, risk management & investement strategy
 - Better UI
+- Dark mode toggleable
+- Export data to CSV/SQL/PDF
 
 ## KNOWN ISSUES:
 - none
