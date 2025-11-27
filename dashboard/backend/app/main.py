@@ -63,6 +63,7 @@ app.include_router(settings.router, prefix="/api", tags=["Settings"])
 
 
 @app.get("/", tags=["Root"])
+@app.get("/api/", tags=["Root"])
 def read_root():
     """welcome, this confirms the API is running"""
     return {"message": "Welcome to the personal finance dashboard API"}
