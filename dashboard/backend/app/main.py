@@ -67,3 +67,21 @@ app.include_router(settings.router, prefix="/api", tags=["Settings"])
 def read_root():
     """welcome, this confirms the API is running"""
     return {"message": "Welcome to the personal finance dashboard API"}
+
+# temporary debug endpoint — remove after debugging
+from fastapi import Request
+
+@app.get("/api/_debug/cors")
+def _debug_cors(request: Request):
+    env = os.getenv("FRONTEND_ORIGINS", "")
+    if env.strip() == "*":
+        allowed = ["*"]
+    elif env.strip() == "":
+        allowed = ["http://localhost:3000"]
+    else:
+        allowed = [o.strip() for o in env.split(",") if o.strip()]
+    return {
+        "FRONTEND_ORIGINS_env": env,
+        "allowed_parsed_list": allowed,
+        "request_origin_header": request.headers.get("origin"),
+    }
