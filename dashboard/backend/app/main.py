@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import category, income, expense, account, settings
 from sqlalchemy import text
 from app.core.database import engine
+import os
+from typing import List
 
 app = FastAPI(
     title="Personal Finance Dashboard API",
@@ -11,9 +13,18 @@ app = FastAPI(
 )
 
 # CORS configuration
-origins = [
-    "http://localhost:3000",
-]
+# Default for local development; in production set FRONTEND_ORIGINS env var (comma-separated)
+_default_origins: List[str] = ["http://localhost:3000"]
+_env_origins = os.getenv("FRONTEND_ORIGINS", "").strip()
+
+if _env_origins:
+    # allow passing "*" to allow all origins, or a comma-separated list of allowed origins
+    if _env_origins == "*":
+        origins = ["*"]
+    else:
+        origins = [o.strip() for o in _env_origins.split(",") if o.strip()]
+else:
+    origins = _default_origins
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ensure emoji columns exist in DB at startup (safe: ALTER TABLE ADD COLUMN is no-op if column exists will raise -> caught)
+# ensure emoji columns exist in DB at startup (best-effort; don't break startup if engine not available)
 def _ensure_emoji_columns():
     try:
         with engine.connect() as conn:
@@ -31,6 +42,7 @@ def _ensure_emoji_columns():
             try:
                 conn.execute(text("ALTER TABLE accounts ADD COLUMN emoji VARCHAR"))
             except Exception:
+                # column exists or other ALTER error; ignore on best-effort basis
                 pass
     except Exception:
         # best-effort only; don't break startup if engine not available
@@ -40,6 +52,7 @@ def _ensure_emoji_columns():
 @app.on_event("startup")
 def _on_startup():
     _ensure_emoji_columns()
+
 
 # by using include_router this way, FastAPI handles the trailing slash automatically
 app.include_router(category.router, prefix="/api", tags=["Categories"])

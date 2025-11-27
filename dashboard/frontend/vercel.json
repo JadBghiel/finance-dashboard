@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "build" }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://finance-dashboard-backend-virid.vercel.app/api/$1"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://finance-dashboard-backend-virid.vercel.app/"
+  }
+}
