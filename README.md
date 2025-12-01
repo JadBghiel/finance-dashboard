@@ -6,7 +6,7 @@
 ## Access the project online
 This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-frontend-xi.vercel.app)
 
-Note: This online version is (will be) from the vercel branch of the repo while the local acess will remain on the main branch, bc of conflicting config files and env variables
+Note: This online version is (will be) from the vercel branch of the repo while the local acess will remain on the main branch, bc of conflicting config files, env variables and database handling
 
 ## Requirements (local access)
 
