@@ -6,11 +6,14 @@
 ## Access the project online
 This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-frontend-xi.vercel.app)
 
-Note: This online version is (will be) from the vercel branch of the repo while the local acess will remain on the main branch, bc of conflicting config files, env variables and database handling
+Note: This online version is fetched from the main branch of the repo while the local access is on the `local-dev` branch, this is due to conflicting config files and variables, but all the features should be the same
 
 ## Requirements (local access)
 
 This project has a backend (Python/FastAPI) and a frontend (React). Before running the project, make sure you have the following installed and configured.
+
+### Clone the repository
+`git clone -b local-dev --single-branch git@github.com:JadBghiel/finance-dashboard.git`
 
 ### System
 - macOS, Linux, or Windows (Windows Subsystem for Linux recommended)
