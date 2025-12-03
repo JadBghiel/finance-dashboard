@@ -75,7 +75,7 @@ In the root of the project:
 ## KNOWN ISSUES:
 - none
 
-## GENERATE ENTRIES
+## GENERATE ENTRIES (local only)
 For testing purposes, you can use the included python script to generate entries for both INCOME and EXPENSES, and test the project
 
 In the root of the project (with python activated or installed):

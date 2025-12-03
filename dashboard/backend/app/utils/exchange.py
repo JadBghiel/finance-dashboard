@@ -6,13 +6,15 @@ import requests
 
 CACHE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".exchange_cache.json"))
 DAILY_LIMIT = 30  # daily limit is 50 but to be safe
+MONTHLY_LIMIT = 1400  # total allowed per month
 
 def _load_cache():
     try:
         with open(CACHE_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"rates": {}, "usage": {"date": None, "count": 0}}
+        # init usage with both day and month counters
+        return {"rates": {}, "usage": {"date": None, "count": 0, "month": None, "month_count": 0}}
 
 def _save_cache(data):
     try:
@@ -22,25 +24,73 @@ def _save_cache(data):
         pass
 
 def _usage_ok(cache):
+    """
+    ensure we haven't exceeded DAILY_LIMIT or MONTHLY_LIMIT
+    reset daily/monthly counters when a new day or month starts
+    """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+
     u = cache.get("usage", {})
-    if u.get("date") != today:
-        # reset
-        cache["usage"] = {"date": today, "count": 0}
+    # init keys if missing
+    if "date" not in u or "count" not in u or "month" not in u or "month_count" not in u:
+        cache["usage"] = {"date": today, "count": 0, "month": month, "month_count": 0}
+        _save_cache(cache)
         return True
-    return u.get("count", 0) < DAILY_LIMIT
+
+    # month rolled over -> reset both day and month counters
+    if u.get("month") != month:
+        cache["usage"]["month"] = month
+        cache["usage"]["month_count"] = 0
+        cache["usage"]["date"] = today
+        cache["usage"]["count"] = 0
+        _save_cache(cache)
+        return True
+
+    # day rolled over -> reset daily counter only
+    if u.get("date") != today:
+        cache["usage"]["date"] = today
+        cache["usage"]["count"] = 0
+        _save_cache(cache)
+        return True
+
+    # enforce both daily and monthly limits
+    day_ok = u.get("count", 0) < DAILY_LIMIT
+    month_ok = u.get("month_count", 0) < MONTHLY_LIMIT
+    return day_ok and month_ok
 
 def _inc_usage(cache):
+    """
+    Increment daily and monthly counters and persist cache.
+    """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    if cache.get("usage", {}).get("date") != today:
-        cache["usage"] = {"date": today, "count": 0}
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+
+    if "usage" not in cache:
+        cache["usage"] = {"date": today, "count": 0, "month": month, "month_count": 0}
+
+    # rollovers ic
+    if cache["usage"].get("month") != month:
+        cache["usage"]["month"] = month
+        cache["usage"]["month_count"] = 0
+        cache["usage"]["date"] = today
+        cache["usage"]["count"] = 0
+
+    if cache["usage"].get("date") != today:
+        cache["usage"]["date"] = today
+        cache["usage"]["count"] = 0
+
+    # ++
     cache["usage"]["count"] = cache["usage"].get("count", 0) + 1
+    cache["usage"]["month_count"] = cache["usage"].get("month_count", 0) + 1
+
+    # persist
     _save_cache(cache)
 
 def get_rate(from_currency: str, to_currency: str) -> float | None:
     """
-    return conversion rate (multiply amount_in_from * rate -> amount_in_to)
-    caches rates for 24h and exe a simple daily call limit
+    return conv rate (multiply amount_in_from * rate -> amount_in_to)
+    caches rates for 24h and enforces daily and monthly call limits
 
     scenarios when limit reached or external call fails:
       - if cached rate exists (even if outdated) -> will be returned
@@ -58,7 +108,7 @@ def get_rate(from_currency: str, to_currency: str) -> float | None:
     if entry and (now_ts - entry.get("ts", 0) < 24 * 3600):
         return entry.get("rate")
 
-    # if daily limit reached, prioritize last cached value (even if outdated)
+    # if daily/monthly limit reached, prioritize last cached value even if outdated
     if not _usage_ok(cache):
         if entry:
             return entry.get("rate")
@@ -86,9 +136,10 @@ def get_rate(from_currency: str, to_currency: str) -> float | None:
         rate = None
 
     if rate is not None:
-        # store in cache and increment usage be carefull // TODO TOCHECK
+        # store in cache and ++ the usage (both daily n monthly)
         cache.setdefault("rates", {})[key] = {"rate": float(rate), "ts": now_ts}
         _inc_usage(cache)
+        # ensure cache (rates + usage) is saved
         _save_cache(cache)
         return float(rate)
 
