@@ -4,7 +4,7 @@
 
 
 ## Access the project online
-This project is hosted online via Vercel: [AVAILABLE HERE](finance-dashboard-hub.vercel.app)
+This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-hub.vercel.app/)
 
 Note: This online version is fetched from the main branch of the repo while the local access is on the `local-dev` branch, this is due to conflicting config files and variables, but all the features should be the same
 
