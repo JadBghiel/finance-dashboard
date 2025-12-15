@@ -8,6 +8,7 @@ import Income from './pages/Income';
 import Expense from './pages/Expense';
 import Accounts from './pages/Accounts';
 import Categories from './pages/Categories';
+import Investments from './pages/Investments';
 
 function App() {
 	return (
@@ -22,6 +23,7 @@ function App() {
 					<Route path="/expense" element={<Expense />} />
 					<Route path="/accounts" element={<Accounts />} />
 					<Route path="/categories" element={<Categories />} />
+					<Route path="/investments" element={<Investments />} />
 				</Routes>
 			</Box>
 		</Box>
