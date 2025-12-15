@@ -13,3 +13,4 @@ class Account(Base):
     # relationships
     incomes = relationship("Income", back_populates="account")
     expenses = relationship("Expense", back_populates="account")
+    investments = relationship("Investment", back_populates="account")
