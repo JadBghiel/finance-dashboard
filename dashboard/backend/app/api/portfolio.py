@@ -42,13 +42,13 @@ def portfolio_summary(db: Session = Depends(get_db)):
     }
 
 @router.post("/portfolio/refresh-prices/")
-def portfolio_refresh_prices(db: Session = Depends(get_db)):
+def portfolio_refresh_prices(force: bool = False, db: Session = Depends(get_db)):
     rows: List[InvestmentModel] = db.query(InvestmentModel).all()
     symbols = sorted({(r.symbol or "").upper() for r in rows if r.symbol})
     if not symbols:
         return {"updated": 0}
 
-    prices = batch_get_last_prices(symbols)
+    prices = batch_get_last_prices(symbols, force_refresh=force)
     updated = 0
     for r in rows:
         s = (r.symbol or "").upper()
@@ -60,7 +60,7 @@ def portfolio_refresh_prices(db: Session = Depends(get_db)):
     return {"updated": updated}
 
 # CSV-based ticker search (tickers.csv at repo root, 2 columns: symbol, category)
-CSV_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "tickers.csv"))
+CSV_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "tickers.csv"))
 
 @lru_cache(maxsize=1)
 def _load_tickers() -> List[Dict[str, str]]:

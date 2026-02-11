@@ -6,18 +6,18 @@ import yfinance as yf
 # simple in-memory caches (process-local)
 _price_cache: Dict[str, Dict[str, float]] = {}  # {symbol: {"ts": epoch, "price": value}}
 _search_cache: Dict[str, Dict] = {}             # {query: {"ts": epoch, "items": [...]}}
-PRICE_TTL = 300     # 5 min
+PRICE_TTL = 86400   # 24 hours (fetch once per day)
 SEARCH_TTL = 600    # 10 min
 
 def _now() -> float:
     return time.time()
 
-def get_last_price(symbol: str) -> Optional[float]:
+def get_last_price(symbol: str, force_refresh: bool = False) -> Optional[float]:
     s = symbol.strip().upper()
     if not s:
         return None
     c = _price_cache.get(s)
-    if c and (_now() - c.get("ts", 0) < PRICE_TTL):
+    if not force_refresh and c and (_now() - c.get("ts", 0) < PRICE_TTL):
         return c.get("price")
 
     price = None
@@ -25,7 +25,7 @@ def get_last_price(symbol: str) -> Optional[float]:
         t = yf.Ticker(s)
         fi = getattr(t, "fast_info", None)
         if fi:
-            price = fi.get("last_price") or fi.get("last_close") or fi.get("previous_close")
+            price = fi.get("lastPrice") or fi.get("last_price") or fi.get("regularMarketPrice") or fi.get("previousClose")
         if price is None:
             hist = t.history(period="1d")
             if not hist.empty:
@@ -38,7 +38,7 @@ def get_last_price(symbol: str) -> Optional[float]:
         return float(price)
     return None
 
-def batch_get_last_prices(symbols: List[str]) -> Dict[str, Optional[float]]:
+def batch_get_last_prices(symbols: List[str], force_refresh: bool = False) -> Dict[str, Optional[float]]:
     # try cache first
     out: Dict[str, Optional[float]] = {}
     fresh: List[str] = []
@@ -46,7 +46,7 @@ def batch_get_last_prices(symbols: List[str]) -> Dict[str, Optional[float]]:
     for s in symbols:
         key = s.strip().upper()
         cached = _price_cache.get(key)
-        if cached and (now - cached.get("ts", 0) < PRICE_TTL):
+        if not force_refresh and cached and (now - cached.get("ts", 0) < PRICE_TTL):
             out[key] = cached.get("price")
         else:
             fresh.append(key)
@@ -63,7 +63,7 @@ def batch_get_last_prices(symbols: List[str]) -> Dict[str, Optional[float]]:
                     if ti:
                         fi = getattr(ti, "fast_info", None)
                         if fi:
-                            price = fi.get("last_price") or fi.get("last_close") or fi.get("previous_close")
+                            price = fi.get("lastPrice") or fi.get("last_price") or fi.get("regularMarketPrice") or fi.get("previousClose")
                         if price is None:
                             hist = ti.history(period="1d")
                             if not hist.empty:

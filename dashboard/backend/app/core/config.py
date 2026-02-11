@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # db config (using SQLite)
-DATABASE_URL = "sqlite:///./finance.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finance.db")
 
 # API keys
 # replace with my actual keys

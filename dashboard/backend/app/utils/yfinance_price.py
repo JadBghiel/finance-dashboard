@@ -6,7 +6,7 @@ from typing import Optional, Dict, List
 
 # local json cache file for price data
 CACHE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".yfinance_cache.json"))
-CACHE_TTL = 5 * 60  # 5 minutes in seconds
+CACHE_TTL = 86400  # 24 hours (fetch once per day)
 MIN_REQUEST_DELAY = 0.2  # 200ms minimum between requests (rate limiting)
 
 def _load_price_cache() -> Dict:
