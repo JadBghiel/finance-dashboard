@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import category, income, expense, account, settings, investments, watchlist, portfolio
+from app.api import category, income, expense, account, settings, investments, watchlist, portfolio, export
 from sqlalchemy import text
 from app.core.database import engine, Base  # added Base
 import os
@@ -103,3 +103,4 @@ app.include_router(settings.router, prefix="/api", tags=["Settings"])
 app.include_router(investments.router, prefix="/api", tags=["Investments"])
 app.include_router(watchlist.router, prefix="/api", tags=["Watchlist"])
 app.include_router(portfolio.router, prefix="/api", tags=["Portfolio"])
+app.include_router(export.router, prefix="/api", tags=["Export"])
