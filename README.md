@@ -43,8 +43,8 @@ Install backend dependencies:
 ### Install the dependencies
     pip install -r dashboard/backend/requirements.txt
 
-## LAUNCH (local development)
-Clone the `local-dev` branch and run:
+## LAUNCH
+In the root of the project:
 
     $ ./run.sh
 
@@ -53,10 +53,6 @@ This script will automatically:
 - Install all backend dependencies
 - Start the FastAPI backend server
 - Start the React frontend
-
-Alternatively, run manually:
-
-    $ npx concurrently "cd dashboard/backend && uvicorn app.main:app --reload" "cd dashboard/frontend && npm start"
 
 ## FEATURES IMPLEMENTED
 - Dashboard page:
