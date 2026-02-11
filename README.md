@@ -1,10 +1,9 @@
 # finance-dashboard
 💰 Personal Finance Dashboard: Track income, expenses, savings, and investments with charts, AI assistant, and multi-currency support
-![alt text](image.png)
 
+## This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-hub.vercel.app/)
 
-## Access the project online
-This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-hub.vercel.app/)
+![alt text](rsrc/image.png)
 
 Note: This online version is fetched from the main branch of the repo while the local access is on the `local-dev` branch, this is due to conflicting config files and variables, but all the features should be the same
 
