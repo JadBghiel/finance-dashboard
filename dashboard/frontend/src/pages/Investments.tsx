@@ -100,7 +100,7 @@ function Investments() {
 
   useEffect(() => { load(); }, []);
 
-  // periodic refresh (once per day) — backend yfinance batch
+  // periodic price refresh - runs once a day
   useEffect(() => {
     const id = setInterval(async () => {
       try { await refreshAllPrices(); } catch (_) {}
@@ -109,15 +109,15 @@ function Investments() {
     return () => clearInterval(id);
   }, []);
 
-  // Manual refresh handler - force fetches from yfinance API
+  // manual refresh - bypasses cache to get fresh prices
   const handleRefreshPrices = async () => {
     setRefreshing(true);
     try {
       const result = await refreshAllPrices(true); // force=true bypasses cache
       await load();
-      alert(`Prices refreshed! Updated ${result.updated} positions.`);
+      alert(`done! updated ${result.updated} positions.`);
     } catch (e: any) {
-      alert(`Failed to refresh prices: ${e.message}`);
+      alert(`couldn't refresh prices: ${e.message}`);
     } finally {
       setRefreshing(false);
     }
@@ -163,25 +163,25 @@ function Investments() {
   };
 
   const submitPosition = async () => {
-    // validation: symbol, type, quantity > 0, purchase_price >= 0, account_id > 0
+    // basic validation
     if (!posForm.symbol || !posForm.symbol.trim()) {
-      alert('Symbol is required');
+      alert('need a symbol');
       return;
     }
     if (!posForm.type) {
-      alert('Type is required');
+      alert('pick a type');
       return;
     }
     if (Number(posForm.quantity) <= 0) {
-      alert('Quantity must be greater than 0');
+      alert('quantity must be > 0');
       return;
     }
     if (Number(posForm.purchase_price) < 0) {
-      alert('Purchase price cannot be negative');
+      alert('price can\'t be negative');
       return;
     }
     if (!posSymbolValid || !isSymbolAllowed(posForm.symbol, symbolOptsPos)) {
-      alert('Please select a valid ticker from the suggestions list');
+      alert('pick a ticker from the list');
       return;
     }
 
@@ -211,13 +211,13 @@ function Investments() {
       setPosOpen(false);
       await load();
     } catch (e: any) {
-      alert(`Failed to save position: ${e.response?.data?.detail || e.message}`);
+      alert(`couldn't save: ${e.response?.data?.detail || e.message}`);
     }
   };
 
   const submitWatch = async () => {
     if (!watchSymbolValid || !isSymbolAllowed(watchForm.symbol, symbolOptsWatch)) {
-      alert('Please select a valid ticker from the suggestions list');
+      alert('pick a ticker from the list');
       return;
     }
     const payload = {
@@ -237,13 +237,13 @@ function Investments() {
   };
 
   const handleDeletePosition = async (id: number) => {
-    if (!window.confirm('Delete this position?')) return;
+    if (!window.confirm('delete this position?')) return;
     await deleteInvestment(id);
     await load();
   };
 
   const handleDeleteWatch = async (id: number) => {
-    if (!window.confirm('Delete this watchlist item?')) return;
+    if (!window.confirm('remove from watchlist?')) return;
     await deleteWatchlistItem(id);
     await load();
   };
@@ -342,8 +342,8 @@ function Investments() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4">📈 Investments Portfolio</Typography>
-          <Typography variant="body2">Track your stocks, ETFs, crypto, and more.</Typography>
+          <Typography variant="h4">📈 investments</Typography>
+          <Typography variant="body2">track your stocks, etfs, crypto, etc.</Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -401,7 +401,7 @@ function Investments() {
                         </PieChart>
                       </ResponsiveContainer>
                     </Box>
-                  ) : <Typography>No investments yet</Typography>}
+                  ) : <Typography>no investments yet</Typography>}
                 </CardContent>
               </Card>
             </Grid>
@@ -541,7 +541,7 @@ function Investments() {
                         </Box>
                       </Box>
                     ))
-                  ) : <Typography>No items in watchlist</Typography>}
+                  ) : <Typography>nothing in watchlist yet</Typography>}
                 </CardContent>
               </Card>
             </Grid>
@@ -606,7 +606,7 @@ function Investments() {
                         );
                       })}
                     </Grid>
-                  ) : <Typography>No positions yet. Add your first investment!</Typography>}
+                  ) : <Typography>no positions yet - add your first one!</Typography>}
                 </CardContent>
               </Card>
             </Grid>
@@ -637,7 +637,7 @@ function Investments() {
                   setPosSymbolValid(false);
                 }
               }}
-              noOptionsText={posSymbolInput.trim().length < 2 ? 'Type at least 2 characters' : 'No matching ticker'}
+              noOptionsText={posSymbolInput.trim().length < 2 ? 'type 2+ chars' : 'no match'}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -720,7 +720,7 @@ function Investments() {
                   setWatchSymbolValid(false);
                 }
               }}
-              noOptionsText={watchSymbolInput.trim().length < 2 ? 'Type at least 2 characters' : 'No matching ticker'}
+              noOptionsText={watchSymbolInput.trim().length < 2 ? 'type 2+ chars' : 'no match'}
               renderInput={(params) => (
                 <TextField
                   {...params}

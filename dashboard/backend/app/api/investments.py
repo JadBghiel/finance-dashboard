@@ -46,5 +46,5 @@ def delete_investment_endpoint(inv_id: int, db: Session = Depends(get_db)):
 
 @router.post("/investments/{inv_id}/refresh-price/")
 def refresh_price(inv_id: int):
-    # placeholder: this NOT WORKING //TODO returns 202 for now
-    return {"status": "accepted", "message": "price refresh enqueued (stub)"}
+    # stub - not implemented yet
+    return {"status": "accepted", "message": "price refresh queued (stub)"}

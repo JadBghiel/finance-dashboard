@@ -65,7 +65,7 @@ def _on_startup():
     except Exception:
         pass
     _ensure_emoji_columns()
-    # refresh investment prices on startup (uses 24h cache so only fetches if stale)
+    # refresh prices on startup (respects 24h cache)
     _refresh_prices_on_startup()
 
 def _refresh_prices_on_startup():

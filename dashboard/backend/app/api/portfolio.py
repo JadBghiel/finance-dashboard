@@ -59,7 +59,7 @@ def portfolio_refresh_prices(force: bool = False, db: Session = Depends(get_db))
     db.commit()
     return {"updated": updated}
 
-# CSV-based ticker search (tickers.csv at repo root, 2 columns: symbol, category)
+# csv ticker search (tickers.csv at repo root)
 CSV_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "tickers.csv"))
 
 @lru_cache(maxsize=1)
