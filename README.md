@@ -46,7 +46,13 @@ Install backend dependencies:
 ## LAUNCH
 In the root of the project:
 
-    $ npx concurrently "cd dashboard/backend && uvicorn app.main:app --reload" "cd dashboard/frontend && npm start"
+    $ ./run.sh
+
+This script will automatically:
+- Create a Python virtual environment (if needed)
+- Install all backend dependencies
+- Start the FastAPI backend server
+- Start the React frontend
 
 ## FEATURES IMPLEMENTED
 - Dashboard page:
@@ -59,24 +65,13 @@ In the root of the project:
     - Add, delete and edit any entry
 - Category page
     - Add, delete and edit any entry
-
-
-## FEATURES TO IMPLEMENT (coming soon)
 - Investment page:
     - Shows portfolio
     - Add, delete or edit any investement
     - Create and view your watchlist
     - View any available financial instrument (Yahoo Finance API)
-- AI Assistant
-    - Provided with the user data
-    - Fine tuned to give recommendations, make projections, budgets, tax plannning, retirement planning, risk management & investement strategy
-- Better UI
 - Dark mode toggleable
 - Export data to CSV/SQL/PDF
-- Fix the deprecation warnings when all features are done
-
-## KNOWN ISSUES:
-- none
 
 ## GENERATE ENTRIES (local only)
 For testing purposes, you can use the included python script to generate entries for both INCOME and EXPENSES, and test the project
