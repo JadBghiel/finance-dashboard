@@ -6,8 +6,8 @@ export const getPortfolioSummary = async (): Promise<PortfolioSummary> => {
   return r.data;
 };
 
-export const refreshAllPrices = async (): Promise<{updated: number}> => {
-  const r = await api.post('/portfolio/refresh-prices/');
+export const refreshAllPrices = async (force: boolean = false): Promise<{ updated: number }> => {
+  const r = await api.post('/portfolio/refresh-prices/', null, { params: { force } });
   return r.data;
 };
 

@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box, Typography, Button, Grid, Card, CardContent, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, FormControl, InputLabel, Select, IconButton, Chip, CircularProgress
+  DialogActions, TextField, MenuItem, FormControl, InputLabel, Select, IconButton, Chip, CircularProgress, InputAdornment
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import Autocomplete from '@mui/material/Autocomplete';
 import { getInvestments, createInvestment, updateInvestment, deleteInvestment, refreshInvestmentPrice } from '../services/investmentService';
 import { getWatchlist, createWatchlistItem, updateWatchlistItem, deleteWatchlistItem } from '../services/watchlistService';
 import { getAccounts, createAccount } from '../services/accountService';
@@ -43,6 +44,7 @@ function Investments() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [investmentAccountId, setInvestmentAccountId] = useState<number | null>(null);
 
   const [posOpen, setPosOpen] = useState(false);
@@ -56,12 +58,14 @@ function Investments() {
   });
   const [watchForm, setWatchForm] = useState<any>({ symbol: '', name: '', type: 'stock', target_price: undefined, notes: '' });
 
-  const [symbolOptsPos, setSymbolOptsPos] = useState<any[]>([]);
-  const [symbolOptsWatch, setSymbolOptsWatch] = useState<any[]>([]);
+  const [symbolOptsPos, setSymbolOptsPos] = useState<{symbol:string;category?:string}[]>([]);
+  const [symbolOptsWatch, setSymbolOptsWatch] = useState<{symbol:string;category?:string}[]>([]);
   const [posSymbolInput, setPosSymbolInput] = useState('');
   const [watchSymbolInput, setWatchSymbolInput] = useState('');
   const [posSymbolValid, setPosSymbolValid] = useState(false);
   const [watchSymbolValid, setWatchSymbolValid] = useState(false);
+  const [posSearchLoading, setPosSearchLoading] = useState(false);
+  const [watchSearchLoading, setWatchSearchLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -96,18 +100,34 @@ function Investments() {
 
   useEffect(() => { load(); }, []);
 
-  // periodic refresh (every 5 minutes) — backend yfinance batch
+  // periodic refresh (once per day) — backend yfinance batch
   useEffect(() => {
     const id = setInterval(async () => {
       try { await refreshAllPrices(); } catch (_) {}
       await load();
-    }, 5 * 60 * 1000);
+    }, 24 * 60 * 60 * 1000); // 24 hours
     return () => clearInterval(id);
   }, []);
+
+  // Manual refresh handler - force fetches from yfinance API
+  const handleRefreshPrices = async () => {
+    setRefreshing(true);
+    try {
+      const result = await refreshAllPrices(true); // force=true bypasses cache
+      await load();
+      alert(`Prices refreshed! Updated ${result.updated} positions.`);
+    } catch (e: any) {
+      alert(`Failed to refresh prices: ${e.message}`);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const openNewPosition = () => {
     setEditingPos(null);
     setPosSymbolValid(false);
+    setSymbolOptsPos([]); // reset options
+    setPosSymbolInput(''); // clear input value
     setPosForm({
       symbol: '', name: '', type: 'stock', quantity: 0, purchase_price: 0, purchase_date: new Date().toISOString().slice(0,10),
       current_price: null, currency: 'USD', account_id: investmentAccountId || 0, notes: ''
@@ -117,22 +137,28 @@ function Investments() {
 
   const openEditPosition = (p: InvestmentType) => {
     setEditingPos(p);
-    setPosSymbolValid(true); // existing saved position
     setPosForm({...p, purchase_date: p.purchase_date?.slice(0,10)});
+    setPosSymbolInput(p.symbol || '');
+    setPosSymbolValid(true);
+    setSymbolOptsPos([{ symbol: p.symbol }]); // seed options to reflect current value
     setPosOpen(true);
   };
 
   const openNewWatch = () => {
     setEditingWatch(null);
-    setWatchSymbolValid(false);
     setWatchForm({ symbol: '', name: '', type: 'stock', target_price: undefined, notes: '' });
+    setWatchSymbolInput('');
+    setWatchSymbolValid(false);
+    setSymbolOptsWatch([]);
     setWatchOpen(true);
   };
 
   const openEditWatch = (w: WatchlistItem) => {
     setEditingWatch(w);
-    setWatchSymbolValid(true); // existing saved watch item
     setWatchForm({...w});
+    setWatchSymbolInput(w.symbol || '');
+    setWatchSymbolValid(true);
+    setSymbolOptsWatch([{ symbol: w.symbol }]); // seed options
     setWatchOpen(true);
   };
 
@@ -154,10 +180,6 @@ function Investments() {
       alert('Purchase price cannot be negative');
       return;
     }
-    if (!posForm.account_id || posForm.account_id === 0) {
-      alert('Account is required (Investment account must be selected)');
-      return;
-    }
     if (!posSymbolValid || !isSymbolAllowed(posForm.symbol, symbolOptsPos)) {
       alert('Please select a valid ticker from the suggestions list');
       return;
@@ -172,7 +194,7 @@ function Investments() {
       purchase_date: new Date(posForm.purchase_date).toISOString(),
       current_price: posForm.current_price ? Number(posForm.current_price) : null,
       currency: posForm.currency || 'USD',
-      account_id: Number(posForm.account_id),
+      account_id: investmentAccountId || 1,  // always use Investment account
       notes: posForm.notes || ''
     };
 
@@ -251,8 +273,7 @@ function Investments() {
       posForm.symbol && posForm.symbol.trim() &&
       posForm.type &&
       Number(posForm.quantity) > 0 &&
-      Number(posForm.purchase_price) >= 0 &&
-      posForm.account_id && posForm.account_id > 0
+      Number(posForm.purchase_price) >= 0
     );
   }, [posForm]);
 
@@ -287,12 +308,13 @@ function Investments() {
   useEffect(() => {
     const q = posSymbolInput.trim();
     if (q.length < 2) { setSymbolOptsPos([]); return; }
+    setPosSearchLoading(true);
     const t = setTimeout(async () => {
       try {
-        // pass current type to narrow results (backend normalized etf/mutual_fund)
         const items = await searchSymbols(q, posForm.type && posForm.type !== 'bond' ? posForm.type : undefined);
         setSymbolOptsPos(items);
       } catch { setSymbolOptsPos([]); }
+      finally { setPosSearchLoading(false); }
     }, 250);
     return () => clearTimeout(t);
   }, [posSymbolInput, posForm.type]);
@@ -301,16 +323,18 @@ function Investments() {
   useEffect(() => {
     const q = watchSymbolInput.trim();
     if (q.length < 2) { setSymbolOptsWatch([]); return; }
+    setWatchSearchLoading(true);
     const t = setTimeout(async () => {
       try {
         const items = await searchSymbols(q);
         setSymbolOptsWatch(items);
       } catch { setSymbolOptsWatch([]); }
+      finally { setWatchSearchLoading(false); }
     }, 250);
     return () => clearTimeout(t);
   }, [watchSymbolInput]);
 
-  const isSymbolAllowed = (sym: string, opts: any[]) =>
+  const isSymbolAllowed = (sym: string, opts: {symbol:string}[]) =>
     !!sym && opts.some(o => (o.symbol || '').toUpperCase() === sym.toUpperCase());
 
   return (
@@ -322,6 +346,14 @@ function Investments() {
           <Typography variant="body2">Track your stocks, ETFs, crypto, and more.</Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={refreshing ? <CircularProgress size={18} /> : <RefreshIcon />}
+            onClick={handleRefreshPrices}
+            disabled={refreshing}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh Prices'}
+          </Button>
           <Button variant="outlined" startIcon={<AddIcon />} onClick={openNewWatch}>Add to Watchlist</Button>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openNewPosition}>Add Position</Button>
         </Box>
@@ -361,10 +393,10 @@ function Investments() {
                     <Box sx={{ height: 300 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={allocationChartData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={100} label>
+                          <Pie data={allocationChartData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={100} label={(e: any) => `${e.name} ($${Number(e.value).toFixed(2)})`}>
                             {allocationChartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                           </Pie>
-                          <Tooltip formatter={(v:any)=>Number(v).toFixed(2)} />
+                          <Tooltip formatter={(v:any)=>`$${Number(v).toFixed(2)}`} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -388,13 +420,13 @@ function Investments() {
                             dataKey="value"
                             nameKey="name"
                             outerRadius={100}
-                            label={(e: any) => `${e.name} (${Number(e.value).toFixed(2)})`}
+                            label={(e: any) => `${e.name} ($${Number(e.value).toFixed(2)})`}
                           >
                             {perCategoryTickerData.stock.map((entry: { name: string; value: number }, i: number) => (
                               <Cell key={entry.name} fill={COLORS[i % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(v: any) => Number(v).toFixed(2)} />
+                          <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -417,13 +449,13 @@ function Investments() {
                             dataKey="value"
                             nameKey="name"
                             outerRadius={100}
-                            label={(e: any) => `${e.name} (${Number(e.value).toFixed(2)})`}
+                            label={(e: any) => `${e.name} ($${Number(e.value).toFixed(2)})`}
                           >
                             {perCategoryTickerData.etf.map((entry: { name: string; value: number }, i: number) => (
                               <Cell key={entry.name} fill={COLORS[i % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(v: any) => Number(v).toFixed(2)} />
+                          <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -446,13 +478,13 @@ function Investments() {
                             dataKey="value"
                             nameKey="name"
                             outerRadius={100}
-                            label={(e: any) => `${e.name} (${Number(e.value).toFixed(2)})`}
+                            label={(e: any) => `${e.name} ($${Number(e.value).toFixed(2)})`}
                           >
                             {perCategoryTickerData.crypto.map((entry: { name: string; value: number }, i: number) => (
                               <Cell key={entry.name} fill={COLORS[i % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(v: any) => Number(v).toFixed(2)} />
+                          <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -475,13 +507,13 @@ function Investments() {
                             dataKey="value"
                             nameKey="name"
                             outerRadius={100}
-                            label={(e: any) => `${e.name} (${Number(e.value).toFixed(2)})`}
+                            label={(e: any) => `${e.name} ($${Number(e.value).toFixed(2)})`}
                           >
                             {perCategoryTickerData.mutual_fund.map((entry: { name: string; value: number }, i: number) => (
                               <Cell key={entry.name} fill={COLORS[i % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(v: any) => Number(v).toFixed(2)} />
+                          <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -501,7 +533,7 @@ function Investments() {
                       <Box key={w.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
                         <Box>
                           <Typography variant="subtitle2">{TYPE_EMOJIS[w.type]} {w.symbol} — {w.name}</Typography>
-                          <Typography variant="caption"><Chip size="small" label={w.type} /> {w.target_price ? `target: $${w.target_price}` : ''}</Typography>
+                          <Typography variant="caption"><Chip size="small" label={w.type} /> {w.target_price ? `target: $${Number(w.target_price).toFixed(2)}` : ''}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <IconButton size="small" onClick={() => openEditWatch(w)}><EditIcon fontSize="small" /></IconButton>
@@ -589,25 +621,37 @@ function Investments() {
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1 }}>
             <Autocomplete
               options={symbolOptsPos}
-              filterOptions={(x) => x} // do not client-filter; use server/CSV results only
-              getOptionLabel={(o: any) => o?.symbol ?? ''}
+              filterOptions={(x) => x} // rely on server/CSV matching
+              getOptionLabel={(o) => o?.symbol ?? ''}
               isOptionEqualToValue={(o, v) => (o?.symbol || '').toUpperCase() === (v?.symbol || '').toUpperCase()}
               freeSolo={false}
-              noOptionsText="No matching ticker"
-              onInputChange={(_, v) => { setPosSymbolInput(v); setPosSymbolValid(false); }}
-              onChange={(_, v: any) => {
+              disableClearable
+              value={symbolOptsPos.find(o => o.symbol.toUpperCase() === (posForm.symbol || '').toUpperCase()) || null}
+              inputValue={posSymbolInput}
+              onInputChange={(_e: React.SyntheticEvent, v: string) => { setPosSymbolInput(v); setPosSymbolValid(false); }}
+              onChange={(_e: React.SyntheticEvent, v: {symbol:string} | null) => {
                 if (v?.symbol) {
                   setPosForm({ ...posForm, symbol: v.symbol.toUpperCase(), name: posForm.name || v.symbol.toUpperCase() });
                   setPosSymbolValid(true);
+                } else {
+                  setPosSymbolValid(false);
                 }
               }}
+              noOptionsText={posSymbolInput.trim().length < 2 ? 'Type at least 2 characters' : 'No matching ticker'}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Symbol"
                   required
-                  value={posForm.symbol}
-                  onChange={(e) => { setPosForm({ ...posForm, symbol: e.target.value.toUpperCase() }); setPosSymbolInput(e.target.value); setPosSymbolValid(false); }}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {posSearchLoading ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    )
+                  }}
                 />
               )}
             />
@@ -619,21 +663,37 @@ function Investments() {
               </Select>
             </FormControl>
             <TextField type="number" label="Quantity" required value={posForm.quantity} onChange={(e)=>setPosForm({...posForm, quantity: Number(e.target.value)})} />
-            <TextField type="number" label="Purchase Price" required value={posForm.purchase_price} onChange={(e)=>setPosForm({...posForm, purchase_price: Number(e.target.value)})} />
-            <TextField type="date" label="Purchase Date" required value={posForm.purchase_date?.slice(0,10)} onChange={(e)=>setPosForm({...posForm, purchase_date: e.target.value})} InputLabelProps={{shrink:true}} />
-            <TextField type="number" label="Current Price (optional)" value={posForm.current_price ?? ''} onChange={(e)=>setPosForm({...posForm, current_price: e.target.value ? Number(e.target.value) : null})} />
+            <TextField
+              type="number"
+              label="Purchase Price"
+              required
+              value={posForm.purchase_price}
+              onChange={(e)=>setPosForm({...posForm, purchase_price: Number(e.target.value)})}
+              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            />
+            <TextField
+              type="date"
+              label="Purchase Date"
+              value={posForm.purchase_date}
+              onChange={(e)=>setPosForm({...posForm, purchase_date: e.target.value})}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              type="number"
+              label="Current Price (optional)"
+              value={posForm.current_price ?? ''}
+              onChange={(e)=>setPosForm({...posForm, current_price: e.target.value ? Number(e.target.value) : null})}
+              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            />
             <TextField label="Currency" value={posForm.currency} onChange={(e)=>setPosForm({...posForm, currency: e.target.value})} />
             <TextField label="Notes" value={posForm.notes ?? ''} onChange={(e)=>setPosForm({...posForm, notes: e.target.value})} multiline rows={2} sx={{gridColumn:'1 / -1'}} />
           </Box>
-          {(!posForm.account_id || posForm.account_id === 0) && (
-            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
-              Investment account not set. Ensure "Investment" account exists.
-            </Typography>
-          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPosOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={submitPosition} disabled={!posFormValid}>Save</Button>
+          <Button variant="contained" onClick={submitPosition} disabled={!posFormValid || !posSymbolValid}>
+            {editingPos ? 'Save' : 'Add'}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -645,35 +705,61 @@ function Investments() {
             <Autocomplete
               options={symbolOptsWatch}
               filterOptions={(x) => x}
-              getOptionLabel={(o: any) => o?.symbol ?? ''}
+              getOptionLabel={(o) => o?.symbol ?? ''}
               isOptionEqualToValue={(o, v) => (o?.symbol || '').toUpperCase() === (v?.symbol || '').toUpperCase()}
               freeSolo={false}
-              noOptionsText="No matching ticker"
-              onInputChange={(_, v) => { setWatchSymbolInput(v); setWatchSymbolValid(false); }}
-              onChange={(_, v: any) => {
+              disableClearable
+              value={symbolOptsWatch.find(o => o.symbol.toUpperCase() === (watchForm.symbol || '').toUpperCase()) || null}
+              inputValue={watchSymbolInput}
+              onInputChange={(_e: React.SyntheticEvent, v: string) => { setWatchSymbolInput(v); setWatchSymbolValid(false); }}
+              onChange={(_e: React.SyntheticEvent, v: {symbol:string} | null) => {
                 if (v?.symbol) {
                   setWatchForm({ ...watchForm, symbol: v.symbol.toUpperCase(), name: watchForm.name || v.symbol.toUpperCase() });
                   setWatchSymbolValid(true);
+                } else {
+                  setWatchSymbolValid(false);
                 }
               }}
+              noOptionsText={watchSymbolInput.trim().length < 2 ? 'Type at least 2 characters' : 'No matching ticker'}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Symbol"
-                  value={watchForm.symbol}
-                  onChange={(e) => { setWatchForm({ ...watchForm, symbol: e.target.value.toUpperCase() }); setWatchSymbolInput(e.target.value); setWatchSymbolValid(false); }}
+                  required
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {watchSearchLoading ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    )
+                  }}
                 />
               )}
             />
             <TextField label="Name" value={watchForm.name} onChange={(e)=>setWatchForm({...watchForm, name: e.target.value})} />
-            <FormControl><InputLabel>Type</InputLabel><Select value={watchForm.type} label="Type" onChange={(e)=>setWatchForm({...watchForm, type: e.target.value})}>{TYPE_OPTIONS.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}</Select></FormControl>
-            <TextField type="number" label="Target Price (optional)" value={watchForm.target_price ?? ''} onChange={(e)=>setWatchForm({...watchForm, target_price: e.target.value ? Number(e.target.value) : null})} />
+            <FormControl>
+              <InputLabel>Type</InputLabel>
+              <Select value={watchForm.type} label="Type" onChange={(e)=>setWatchForm({...watchForm, type: e.target.value})}>
+                {TYPE_OPTIONS.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <TextField
+              type="number"
+              label="Target Price (optional)"
+              value={watchForm.target_price ?? ''}
+              onChange={(e)=>setWatchForm({...watchForm, target_price: e.target.value ? Number(e.target.value) : null})}
+              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            />
             <TextField label="Notes" value={watchForm.notes ?? ''} onChange={(e)=>setWatchForm({...watchForm, notes: e.target.value})} multiline rows={2} sx={{gridColumn:'1 / -1'}} />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setWatchOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={submitWatch}>{editingWatch ? 'Save' : 'Add'}</Button>
+          <Button variant="contained" onClick={submitWatch} disabled={!watchSymbolValid}>
+            {editingWatch ? 'Save' : 'Add'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
