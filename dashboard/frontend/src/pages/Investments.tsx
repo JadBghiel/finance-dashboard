@@ -626,7 +626,7 @@ function Investments() {
               isOptionEqualToValue={(o, v) => (o?.symbol || '').toUpperCase() === (v?.symbol || '').toUpperCase()}
               freeSolo={false}
               disableClearable
-              value={symbolOptsPos.find(o => o.symbol.toUpperCase() === (posForm.symbol || '').toUpperCase()) || null}
+              value={symbolOptsPos.find(o => o.symbol.toUpperCase() === (posForm.symbol || '').toUpperCase()) || undefined}
               inputValue={posSymbolInput}
               onInputChange={(_e: React.SyntheticEvent, v: string) => { setPosSymbolInput(v); setPosSymbolValid(false); }}
               onChange={(_e: React.SyntheticEvent, v: {symbol:string} | null) => {
@@ -709,7 +709,7 @@ function Investments() {
               isOptionEqualToValue={(o, v) => (o?.symbol || '').toUpperCase() === (v?.symbol || '').toUpperCase()}
               freeSolo={false}
               disableClearable
-              value={symbolOptsWatch.find(o => o.symbol.toUpperCase() === (watchForm.symbol || '').toUpperCase()) || null}
+              value={symbolOptsWatch.find(o => o.symbol.toUpperCase() === (watchForm.symbol || '').toUpperCase()) || undefined}
               inputValue={watchSymbolInput}
               onInputChange={(_e: React.SyntheticEvent, v: string) => { setWatchSymbolInput(v); setWatchSymbolValid(false); }}
               onChange={(_e: React.SyntheticEvent, v: {symbol:string} | null) => {

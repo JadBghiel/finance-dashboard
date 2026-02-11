@@ -3,6 +3,7 @@ import { Box, Toolbar } from '@mui/material';
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import Topbar from './components/Topbar/Topbar';
+import DarkModeToggle from './components/DarkModeToggle';
 import Dashboard from './pages/Dashboard';
 import Income from './pages/Income';
 import Expense from './pages/Expense';
@@ -26,6 +27,7 @@ function App() {
 					<Route path="/investments" element={<Investments />} />
 				</Routes>
 			</Box>
+			<DarkModeToggle />
 		</Box>
 	);
 }
