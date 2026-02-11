@@ -65,6 +65,34 @@ def _on_startup():
     except Exception:
         pass
     _ensure_emoji_columns()
+    # refresh investment prices on startup (uses 24h cache so only fetches if stale)
+    _refresh_prices_on_startup()
+
+def _refresh_prices_on_startup():
+    """refresh all investment prices on startup (respects 24h cache)"""
+    try:
+        from app.core.database import SessionLocal
+        from app.models.investment import Investment
+        from app.utils.market import batch_get_last_prices
+        from decimal import Decimal
+        
+        db = SessionLocal()
+        try:
+            rows = db.query(Investment).all()
+            symbols = sorted({(r.symbol or "").upper() for r in rows if r.symbol})
+            if symbols:
+                prices = batch_get_last_prices(symbols)
+                for r in rows:
+                    s = (r.symbol or "").upper()
+                    p = prices.get(s)
+                    if p is not None:
+                        r.current_price = Decimal(str(p))
+                db.commit()
+                print(f"[startup] refreshed prices for {len(symbols)} symbols")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[startup] Price refresh failed: {e}")
 
 # by using include_router this way, FastAPI handles the trailing slash automatically
 app.include_router(category.router, prefix="/api", tags=["Categories"])
