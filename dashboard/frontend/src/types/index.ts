@@ -7,7 +7,8 @@ export interface Category {
 export interface Account {
   id: number;
   name: string;
-  emoji?: string; // added
+  emoji?: string;
+  account_type?: string;
 }
 
 export interface Income {
@@ -15,7 +16,7 @@ export interface Income {
   amount: number;
   currency: string;
   description: string | null;
-  date: string; // using string for simplicity, can be date object
+  date: string;
   category_id: number;
   category: Category;
   account_id: number;
@@ -38,3 +39,39 @@ export interface Expense {
 }
 
 export type ExpenseCreate = Omit<Expense, 'id' | 'category' | 'account'>;
+
+export interface Investment {
+  id: number;
+  symbol: string;
+  name?: string;
+  type: 'stock'|'etf'|'crypto'|'mutual_fund';
+  quantity: number;
+  purchase_price: number;
+  purchase_date: string;
+  current_price?: number | null;
+  currency: string;
+  account_id: number;
+  account?: Account; // linked account (investment account)
+  notes?: string | null;
+}
+
+// allow current_price (and name/notes) in create payload
+export type InvestmentCreate = Omit<Investment, 'id'>;
+
+export interface WatchlistItem {
+  id: number;
+  symbol: string;
+  name?: string;
+  type: 'stock'|'etf'|'crypto'|'mutual_fund';
+  target_price?: number | null;
+  notes?: string | null;
+}
+
+export interface PortfolioSummary {
+  total_value: number;
+  total_invested: number;
+  cash_position: number;
+  total_pnl: number;
+  pnl_percentage: number;
+  allocation: Record<string, number>; // type -> value
+}

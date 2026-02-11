@@ -4,12 +4,14 @@ import {
   Grid, Card, CardContent, CircularProgress
 } from '@mui/material';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import DownloadIcon from '@mui/icons-material/Download';
 import { getBaseCurrency, updateBaseCurrency } from '../services/settingsService';
 import { getAccounts, getAccountBalance } from '../services/accountService';
 import { getIncomes } from '../services/incomeService';
 import { getExpenses } from '../services/expenseService';
 import Charts from '../components/Dashboard/Charts';
 import { getColorForKey } from '../constants/colors';
+import ExportDialog from '../components/ExportDialog';
 
 const currencyOptions = [
   { code: 'EUR', label: 'Euro' },
@@ -44,6 +46,8 @@ function Dashboard() {
 
   const [timeframe, setTimeframe] = useState<'day'|'week'|'month'|'quarter'|'year'>('month');
   const [accountFilter, setAccountFilter] = useState<number| 'all' >('all');
+
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -167,8 +171,12 @@ function Dashboard() {
           </FormControl>
 
           <Button variant="contained" onClick={save} disabled={pending}>Save</Button>
+          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => setExportOpen(true)}>Export</Button>
         </Box>
       </Box>
+
+      {/* export dialog */}
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
 
       {/* charts area */}
       {loadingTx ? <CircularProgress /> : (

@@ -6,6 +6,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AccountBoxIcon from '@mui/icons-material/AccountBox'; // EDIT: added icon for Accounts
 import CategoryIcon from '@mui/icons-material/Category'; // EDIT: added icon for Categories
+import ShowChartIcon from '@mui/icons-material/ShowChart'; // EDIT: added icon for Investments
 
 const drawerWidth = 240;
 
@@ -15,6 +16,7 @@ const menuItems = [
   { text: '🧾 Expense', icon: <TrendingDownIcon />, path: '/expense' },
   { text: '🏧 Accounts', icon: <AccountBoxIcon />, path: '/accounts' },
   { text: '🏷️ Categories', icon: <CategoryIcon />, path: '/categories' },
+  { text: '📈 Investments', icon: <ShowChartIcon />, path: '/investments' },
 ];
 
 function Sidebar() {

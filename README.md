@@ -1,14 +1,9 @@
 # finance-dashboard
 💰 Personal Finance Dashboard: Track income, expenses, savings, and investments with charts, AI assistant, and multi-currency support
-![alt text](image.png)
 
+## This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-hub.vercel.app/)
 
-## Access the project online
-<<<<<<< HEAD
-This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-frontend-xi.vercel.app)
-=======
-This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-hub.vercel.app/)
->>>>>>> b3a0e60 (Fix: URL was wrong now fixed for the online version in  README)
+![alt text](rsrc/image.png)
 
 Note: This online version is fetched from the main branch of the repo while the local access is on the `local-dev` branch, this is due to conflicting config files and variables, but all the features should be the same
 
@@ -17,7 +12,7 @@ Note: This online version is fetched from the main branch of the repo while the 
 This project has a backend (Python/FastAPI) and a frontend (React). Before running the project, make sure you have the following installed and configured.
 
 ### Clone the repository
-`git clone -b local-dev --single-branch git@github.com:JadBghiel/finance-dashboard.git`
+    $ git clone -b local-dev --single-branch git@github.com:JadBghiel/finance-dashboard.git
 
 ### System
 - macOS, Linux, or Windows (Windows Subsystem for Linux recommended)
@@ -48,8 +43,18 @@ Install backend dependencies:
 ### Install the dependencies
     pip install -r dashboard/backend/requirements.txt
 
-## LAUNCH
-In the root of the project:
+## LAUNCH (local development)
+Clone the `local-dev` branch and run:
+
+    $ ./run.sh
+
+This script will automatically:
+- Create a Python virtual environment (if needed)
+- Install all backend dependencies
+- Start the FastAPI backend server
+- Start the React frontend
+
+Alternatively, run manually:
 
     $ npx concurrently "cd dashboard/backend && uvicorn app.main:app --reload" "cd dashboard/frontend && npm start"
 
@@ -64,23 +69,13 @@ In the root of the project:
     - Add, delete and edit any entry
 - Category page
     - Add, delete and edit any entry
-
-
-## FEATURES TO IMPLEMENT (coming soon)
 - Investment page:
     - Shows portfolio
     - Add, delete or edit any investement
     - Create and view your watchlist
     - View any available financial instrument (Yahoo Finance API)
-- AI Assistant
-    - Provided with the user data
-    - Fine tuned to give recommendations, make projections, budgets, tax plannning, retirement planning, risk management & investement strategy
-- Better UI
 - Dark mode toggleable
 - Export data to CSV/SQL/PDF
-
-## KNOWN ISSUES:
-- none
 
 ## GENERATE ENTRIES (local only)
 For testing purposes, you can use the included python script to generate entries for both INCOME and EXPENSES, and test the project

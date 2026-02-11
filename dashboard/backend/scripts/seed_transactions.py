@@ -2,12 +2,13 @@
 simple seeder for finance.db
 
 usage:
-  cd dashboard/backend
-  python3 scripts/seed_transactions.py --incomes <amount> --expenses <amount>
+    cd dashboard/backend
+    python3 scripts/seed_transactions.py --incomes <amount> --expenses <amount> --investments <amount> --watchlist <amount>
 
 the script will:
  - ensure requested categories/accounts exist (create if missing)
  - insert the requested number of income and expense rows
+ - insert requested investment positions and watchlist items
  - guarantee total expenses < total incomes (positive balance)
 """
 import os
@@ -42,7 +43,31 @@ EXPENSE_CATEGORIES = [
 ACCOUNTS = [
     "Main", "Savings", "High Yield Savings Accounts", "Joint", "Emergency Fund",
     "Christmas Club", "Vacation Club", "Wedding Fund", "Pension", "Health Savings",
-    "New Car", "Parents"
+    "New Car", "Parents", "Investment"
+]
+
+INVESTMENT_CATALOG = [
+    {"symbol": "AAPL", "name": "Apple Inc.", "type": "stock", "currency": "USD", "base_price": 190.0},
+    {"symbol": "MSFT", "name": "Microsoft Corp.", "type": "stock", "currency": "USD", "base_price": 410.0},
+    {"symbol": "TSLA", "name": "Tesla Inc.", "type": "stock", "currency": "USD", "base_price": 210.0},
+    {"symbol": "NVDA", "name": "NVIDIA Corp.", "type": "stock", "currency": "USD", "base_price": 650.0},
+    {"symbol": "AMZN", "name": "Amazon.com", "type": "stock", "currency": "USD", "base_price": 175.0},
+    {"symbol": "SPY", "name": "SPDR S&P 500 ETF", "type": "etf", "currency": "USD", "base_price": 510.0},
+    {"symbol": "QQQ", "name": "Invesco QQQ ETF", "type": "etf", "currency": "USD", "base_price": 430.0},
+    {"symbol": "VTI", "name": "Vanguard Total Stock Market ETF", "type": "etf", "currency": "USD", "base_price": 250.0},
+    {"symbol": "BTC-USD", "name": "Bitcoin", "type": "crypto", "currency": "USD", "base_price": 43000.0},
+    {"symbol": "ETH-USD", "name": "Ethereum", "type": "crypto", "currency": "USD", "base_price": 2300.0},
+    {"symbol": "VTSAX", "name": "Vanguard Total Stock Market Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 120.0},
+    {"symbol": "SWPPX", "name": "Schwab S&P 500 Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 78.0}
+]
+
+WATCHLIST_CATALOG = [
+    {"symbol": "GOOGL", "name": "Alphabet Inc.", "type": "stock", "target": 180.0},
+    {"symbol": "META", "name": "Meta Platforms", "type": "stock", "target": 460.0},
+    {"symbol": "AMD", "name": "Advanced Micro Devices", "type": "stock", "target": 170.0},
+    {"symbol": "SMH", "name": "VanEck Semiconductor ETF", "type": "etf", "target": 260.0},
+    {"symbol": "SOL-USD", "name": "Solana", "type": "crypto", "target": 180.0},
+    {"symbol": "BND", "name": "Vanguard Total Bond Market ETF", "type": "etf", "target": 76.0}
 ]
 
 LOREM = [
@@ -134,6 +159,24 @@ def insert_expense(conn: sqlite3.Connection, amount: Decimal, currency: str, des
         (str(amount), currency, description, date_iso, category_id, account_id)
     )
 
+def insert_investment(conn: sqlite3.Connection, symbol: str, name: str, inv_type: str, quantity: Decimal,
+                      purchase_price: Decimal, purchase_date: str, current_price: Decimal,
+                      currency: str, account_id: int, notes: str = ""):
+    conn.execute(
+        """
+        INSERT INTO investments
+        (symbol, name, type, quantity, purchase_price, purchase_date, current_price, currency, account_id, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (symbol, name, inv_type, str(quantity), str(purchase_price), purchase_date, str(current_price), currency, account_id, notes)
+    )
+
+def insert_watchlist(conn: sqlite3.Connection, symbol: str, name: str, inv_type: str, target_price: Decimal, notes: str = ""):
+    conn.execute(
+        "INSERT INTO watchlist (symbol, name, type, target_price, notes) VALUES (?, ?, ?, ?, ?)",
+        (symbol, name, inv_type, str(target_price), notes)
+    )
+
 def random_past_date(days_back=DAYS_BACK):
     """
     return an ISO timestamp randomly chosen in the past "days_back" days
@@ -152,7 +195,7 @@ def delete_entries(conn: sqlite3.Connection, count: int, table: str = 'both', ra
     """
     cur = conn.cursor()
 
-    valid_tables = {'incomes', 'expenses', 'both'}
+    valid_tables = {'incomes', 'expenses', 'both', 'investments', 'watchlist', 'all'}
     t = table.lower()
     if t not in valid_tables:
         raise ValueError("table must be 'incomes', 'expenses' or 'both'")
@@ -165,6 +208,23 @@ def delete_entries(conn: sqlite3.Connection, count: int, table: str = 'both', ra
         if t == 'expenses':
             rows = cur.execute("SELECT id FROM expenses").fetchall()
             return [(r[0], 'expenses') for r in rows]
+        if t == 'investments':
+            rows = cur.execute("SELECT id FROM investments").fetchall()
+            return [(r[0], 'investments') for r in rows]
+        if t == 'watchlist':
+            rows = cur.execute("SELECT id FROM watchlist").fetchall()
+            return [(r[0], 'watchlist') for r in rows]
+        if t == 'all':
+            rows_inc = cur.execute("SELECT id FROM incomes").fetchall()
+            rows_exp = cur.execute("SELECT id FROM expenses").fetchall()
+            rows_inv = cur.execute("SELECT id FROM investments").fetchall()
+            rows_wl = cur.execute("SELECT id FROM watchlist").fetchall()
+            return (
+                [(r[0], 'incomes') for r in rows_inc]
+                + [(r[0], 'expenses') for r in rows_exp]
+                + [(r[0], 'investments') for r in rows_inv]
+                + [(r[0], 'watchlist') for r in rows_wl]
+            )
         # both
         rows_inc = cur.execute("SELECT id FROM incomes").fetchall()
         rows_exp = cur.execute("SELECT id FROM expenses").fetchall()
@@ -205,6 +265,8 @@ def main():
     p = argparse.ArgumentParser(description="Seed finance.db with random incomes and expenses.")
     p.add_argument("--incomes", type=int, default=20, help="Number of income entries to create")
     p.add_argument("--expenses", type=int, default=10, help="Number of expense entries to create")
+    p.add_argument("--investments", type=int, default=8, help="Number of investment positions to create")
+    p.add_argument("--watchlist", type=int, default=6, help="Number of watchlist items to create")
     p.add_argument("--years", type=int, default=None, help="Spread entries across N years (overrides internal DAYS_BACK when provided)")
     args, unknown = p.parse_known_args()
 
@@ -214,7 +276,7 @@ def main():
         try:
             delete_count = int(sys.argv[2]) if len(sys.argv) > 2 else 0
         except Exception:
-            print("Usage: python3 scripts/seed_transactions.py delete <count> [--random] [--table incomes|expenses|both]")
+            print("Usage: python3 scripts/seed_transactions.py delete <count> [--random] [--table incomes|expenses|both|investments|watchlist|all]")
             return
 
         randomize = '--random' in sys.argv or '-r' in sys.argv
@@ -253,7 +315,7 @@ def main():
 
     try:
         # make sure tables exist
-        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','categories','incomes','expenses')")
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
         found = {r["name"] for r in cur.fetchall()}
         needed = {'accounts','categories','incomes','expenses'}
         if not needed.issubset(found):
@@ -275,6 +337,9 @@ def main():
             account_name_to_id[name] = aid
 
         conn.commit()
+
+        # ensure investment account exists
+        investment_account_id = account_name_to_id.get("Investment")
 
         # insert incomes
         incomes_total = Decimal("0")
@@ -339,9 +404,66 @@ def main():
 
         conn.commit()
 
+        # insert investments
+        if args.investments and args.investments > 0:
+            if 'investments' not in found:
+                print("Investments table not found; skipping investment seeding.")
+            else:
+                for _ in range(args.investments):
+                    item = random.choice(INVESTMENT_CATALOG)
+                    base = float(item["base_price"])
+                    purchase = quantize_amount(random.uniform(base * 0.85, base * 1.15))
+                    current = quantize_amount(float(purchase) * random.uniform(0.9, 1.2))
+
+                    if item["type"] == "crypto":
+                        qty = Decimal(str(random.uniform(0.05, 3.0))).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+                    elif item["type"] == "mutual_fund":
+                        qty = Decimal(str(random.uniform(10, 200))).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+                    else:
+                        qty = Decimal(str(random.uniform(1, 50))).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+
+                    purchase_date = random_past_date(days_back)
+                    notes = random.choice(["Long-term hold", "Dividend play", "Growth", "Value", "DCA", "Speculative"])
+
+                    insert_investment(
+                        conn,
+                        symbol=item["symbol"],
+                        name=item["name"],
+                        inv_type=item["type"],
+                        quantity=qty,
+                        purchase_price=purchase,
+                        purchase_date=purchase_date,
+                        current_price=current,
+                        currency=item["currency"],
+                        account_id=investment_account_id or list(account_name_to_id.values())[0],
+                        notes=notes
+                    )
+                conn.commit()
+
+        # insert watchlist items
+        if args.watchlist and args.watchlist > 0:
+            if 'watchlist' not in found:
+                print("Watchlist table not found; skipping watchlist seeding.")
+            else:
+                for _ in range(args.watchlist):
+                    item = random.choice(WATCHLIST_CATALOG)
+                    target = quantize_amount(random.uniform(item["target"] * 0.9, item["target"] * 1.1))
+                    notes = random.choice(["Watch for breakout", "Buy on dip", "Earnings catalyst", "Long-term candidate", "Trend reversal"])
+                    insert_watchlist(
+                        conn,
+                        symbol=item["symbol"],
+                        name=item["name"],
+                        inv_type=item["type"],
+                        target_price=target,
+                        notes=notes
+                    )
+                conn.commit()
+
         print("Seeding complete")
         print(f"Inserted incomes: {args.incomes}, total incomes = {incomes_total}")
         print(f"Inserted expenses: {args.expenses}, total expenses = {expenses_total}")
+        print(f"Inserted investments: {args.investments}")
+        print(f"Inserted watchlist items: {args.watchlist}")
         print(f"DB path: {DB_PATH}")
 
     finally:
