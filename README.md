@@ -1,5 +1,5 @@
 # finance-dashboard
-💰 Personal Finance Dashboard: Track income, expenses, savings, and investments with charts, AI assistant, and multi-currency support
+💰 Personal Finance Dashboard: Track income, expenses, savings, and investments with charts and multi-currency support
 
 ## This project is hosted online via Vercel: [AVAILABLE HERE](https://finance-dashboard-hub.vercel.app/)
 
