@@ -101,27 +101,119 @@ ACCOUNTS = [
 ]
 
 INVESTMENT_CATALOG = [
+    # Mega-cap stocks
     {"symbol": "AAPL", "name": "Apple Inc.", "type": "stock", "currency": "USD", "base_price": 190.0},
     {"symbol": "MSFT", "name": "Microsoft Corp.", "type": "stock", "currency": "USD", "base_price": 410.0},
-    {"symbol": "TSLA", "name": "Tesla Inc.", "type": "stock", "currency": "USD", "base_price": 210.0},
-    {"symbol": "NVDA", "name": "NVIDIA Corp.", "type": "stock", "currency": "USD", "base_price": 650.0},
+    {"symbol": "GOOGL", "name": "Alphabet Inc.", "type": "stock", "currency": "USD", "base_price": 150.0},
     {"symbol": "AMZN", "name": "Amazon.com", "type": "stock", "currency": "USD", "base_price": 175.0},
+    {"symbol": "META", "name": "Meta Platforms", "type": "stock", "currency": "USD", "base_price": 480.0},
+    {"symbol": "TSLA", "name": "Tesla Inc.", "type": "stock", "currency": "USD", "base_price": 210.0},
+    {"symbol": "BRK-B", "name": "Berkshire Hathaway B", "type": "stock", "currency": "USD", "base_price": 380.0},
+    {"symbol": "JNJ", "name": "Johnson & Johnson", "type": "stock", "currency": "USD", "base_price": 155.0},
+    {"symbol": "V", "name": "Visa Inc.", "type": "stock", "currency": "USD", "base_price": 280.0},
+    {"symbol": "WMT", "name": "Walmart Inc.", "type": "stock", "currency": "USD", "base_price": 90.0},
+    # Tech stocks
+    {"symbol": "NVDA", "name": "NVIDIA Corp.", "type": "stock", "currency": "USD", "base_price": 650.0},
+    {"symbol": "INTC", "name": "Intel Corp.", "type": "stock", "currency": "USD", "base_price": 45.0},
+    {"symbol": "AMD", "name": "Advanced Micro Devices", "type": "stock", "currency": "USD", "base_price": 165.0},
+    {"symbol": "ASML", "name": "ASML Holding", "type": "stock", "currency": "USD", "base_price": 640.0},
+    {"symbol": "NFLX", "name": "Netflix Inc.", "type": "stock", "currency": "USD", "base_price": 240.0},
+    # Finance stocks
+    {"symbol": "JPM", "name": "JPMorgan Chase", "type": "stock", "currency": "USD", "base_price": 190.0},
+    {"symbol": "BAC", "name": "Bank of America", "type": "stock", "currency": "USD", "base_price": 35.0},
+    {"symbol": "GS", "name": "Goldman Sachs", "type": "stock", "currency": "USD", "base_price": 375.0},
+    {"symbol": "MA", "name": "Mastercard Inc.", "type": "stock", "currency": "USD", "base_price": 430.0},
+    # Energy stocks
+    {"symbol": "XOM", "name": "Exxon Mobil", "type": "stock", "currency": "USD", "base_price": 115.0},
+    {"symbol": "CVX", "name": "Chevron Corp.", "type": "stock", "currency": "USD", "base_price": 160.0},
+    {"symbol": "COP", "name": "ConocoPhillips", "type": "stock", "currency": "USD", "base_price": 125.0},
+    # Healthcare stocks
+    {"symbol": "PFE", "name": "Pfizer Inc.", "type": "stock", "currency": "USD", "base_price": 28.0},
+    {"symbol": "MRK", "name": "Merck & Co.", "type": "stock", "currency": "USD", "base_price": 78.0},
+    {"symbol": "LLY", "name": "Eli Lilly", "type": "stock", "currency": "USD", "base_price": 645.0},
+    {"symbol": "UNH", "name": "UnitedHealth Group", "type": "stock", "currency": "USD", "base_price": 510.0},
+    # Industrial stocks
+    {"symbol": "BA", "name": "Boeing Co.", "type": "stock", "currency": "USD", "base_price": 195.0},
+    {"symbol": "CAT", "name": "Caterpillar Inc.", "type": "stock", "currency": "USD", "base_price": 395.0},
+    {"symbol": "DE", "name": "Deere & Co.", "type": "stock", "currency": "USD", "base_price": 405.0},
+    # Consumer discretionary
+    {"symbol": "MCD", "name": "McDonald's Corp.", "type": "stock", "currency": "USD", "base_price": 305.0},
+    {"symbol": "COST", "name": "Costco Wholesale", "type": "stock", "currency": "USD", "base_price": 875.0},
+    {"symbol": "NKE", "name": "Nike Inc.", "type": "stock", "currency": "USD", "base_price": 85.0},
+    # ETFs - Large cap
     {"symbol": "SPY", "name": "SPDR S&P 500 ETF", "type": "etf", "currency": "USD", "base_price": 510.0},
+    {"symbol": "VOO", "name": "Vanguard S&P 500 ETF", "type": "etf", "currency": "USD", "base_price": 485.0},
+    {"symbol": "IVV", "name": "iShares Core S&P 500 ETF", "type": "etf", "currency": "USD", "base_price": 490.0},
+    # ETFs - Tech
     {"symbol": "QQQ", "name": "Invesco QQQ ETF", "type": "etf", "currency": "USD", "base_price": 430.0},
+    {"symbol": "XLK", "name": "Technology Select Sector SPDR", "type": "etf", "currency": "USD", "base_price": 215.0},
+    {"symbol": "SMH", "name": "VanEck Semiconductor ETF", "type": "etf", "currency": "USD", "base_price": 265.0},
+    # ETFs - Broad market & bonds
     {"symbol": "VTI", "name": "Vanguard Total Stock Market ETF", "type": "etf", "currency": "USD", "base_price": 250.0},
+    {"symbol": "BND", "name": "Vanguard Total Bond Market ETF", "type": "etf", "currency": "USD", "base_price": 76.0},
+    {"symbol": "AGG", "name": "iShares Core US Aggregate Bond ETF", "type": "etf", "currency": "USD", "base_price": 89.0},
+    # ETFs - Specialty
+    {"symbol": "GLD", "name": "SPDR Gold Shares", "type": "etf", "currency": "USD", "base_price": 185.0},
+    {"symbol": "USO", "name": "United States Oil Fund", "type": "etf", "currency": "USD", "base_price": 70.0},
+    {"symbol": "UNG", "name": "United States Natural Gas Fund", "type": "etf", "currency": "USD", "base_price": 16.0},
+    # Mutual funds
+    {"symbol": "VTSAX", "name": "Vanguard Total Stock Market Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 120.0},
+    {"symbol": "VFIAX", "name": "Vanguard Institutional S&P 500 Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 410.0},
+    {"symbol": "FSKAX", "name": "Fidelity Total Market Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 145.0},
+    {"symbol": "SWPPX", "name": "Schwab S&P 500 Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 78.0},
+    # Cryptocurrencies
     {"symbol": "BTC-USD", "name": "Bitcoin", "type": "crypto", "currency": "USD", "base_price": 43000.0},
     {"symbol": "ETH-USD", "name": "Ethereum", "type": "crypto", "currency": "USD", "base_price": 2300.0},
-    {"symbol": "VTSAX", "name": "Vanguard Total Stock Market Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 120.0},
-    {"symbol": "SWPPX", "name": "Schwab S&P 500 Index Fund", "type": "mutual_fund", "currency": "USD", "base_price": 78.0}
+    {"symbol": "SOL-USD", "name": "Solana", "type": "crypto", "currency": "USD", "base_price": 185.0},
+    {"symbol": "XRP-USD", "name": "Ripple", "type": "crypto", "currency": "USD", "base_price": 2.45},
+    {"symbol": "ADA-USD", "name": "Cardano", "type": "crypto", "currency": "USD", "base_price": 1.05},
 ]
 
 WATCHLIST_CATALOG = [
-    {"symbol": "GOOGL", "name": "Alphabet Inc.", "type": "stock", "target": 180.0},
-    {"symbol": "META", "name": "Meta Platforms", "type": "stock", "target": 460.0},
-    {"symbol": "AMD", "name": "Advanced Micro Devices", "type": "stock", "target": 170.0},
-    {"symbol": "SMH", "name": "VanEck Semiconductor ETF", "type": "etf", "target": 260.0},
-    {"symbol": "SOL-USD", "name": "Solana", "type": "crypto", "target": 180.0},
-    {"symbol": "BND", "name": "Vanguard Total Bond Market ETF", "type": "etf", "target": 76.0}
+    # Growth stocks
+    {"symbol": "PLTR", "name": "Palantir Technologies", "type": "stock", "target": 28.0},
+    {"symbol": "COIN", "name": "Coinbase Global", "type": "stock", "target": 105.0},
+    {"symbol": "UBER", "name": "Uber Technologies", "type": "stock", "target": 75.0},
+    {"symbol": "SHOP", "name": "Shopify Inc.", "type": "stock", "target": 92.0},
+    {"symbol": "SQ", "name": "Square Inc.", "type": "stock", "target": 125.0},
+    # Dividend stocks
+    {"symbol": "PG", "name": "Procter & Gamble", "type": "stock", "target": 165.0},
+    {"symbol": "KO", "name": "Coca-Cola Co.", "type": "stock", "target": 62.0},
+    {"symbol": "PEP", "name": "PepsiCo Inc.", "type": "stock", "target": 185.0},
+    {"symbol": "MO", "name": "Altria Group", "type": "stock", "target": 48.0},
+    # Renewables & green energy
+    {"symbol": "ENPH", "name": "Enphase Energy", "type": "stock", "target": 125.0},
+    {"symbol": "ICLN", "name": "iClimate Global Clean Energy ETF", "type": "etf", "target": 35.0},
+    {"symbol": "ACHR", "name": "Archer Clean Energy ETF", "type": "etf", "target": 22.0},
+    # ARK Innovation
+    {"symbol": "ARKK", "name": "ARK Innovation ETF", "type": "etf", "target": 75.0},
+    # Bond ETFs
+    {"symbol": "TLT", "name": "iShares 20+ Year Treasury Bond ETF", "type": "etf", "target": 85.0},
+    {"symbol": "LQD", "name": "iShares Investment Grade Corporate Bond ETF", "type": "etf", "target": 108.0},
+    # International & emerging markets
+    {"symbol": "EEM", "name": "iShares MSCI Emerging Markets ETF", "type": "etf", "target": 42.0},
+    {"symbol": "FXI", "name": "iShares China Large-Cap ETF", "type": "etf", "target": 32.0},
+    # Dividend aristocrats
+    {"symbol": "JNJ", "name": "Johnson & Johnson", "type": "stock", "target": 160.0},
+    {"symbol": "MMM", "name": "3M Company", "type": "stock", "target": 105.0},
+    # Real estate
+    {"symbol": "VNQ", "name": "Vanguard Real Estate ETF", "type": "etf", "target": 105.0},
+    {"symbol": "SPG", "name": "Simon Property Group", "type": "stock", "target": 100.0},
+    # Small-cap growth
+    {"symbol": "IWM", "name": "Russell 2000 ETF", "type": "etf", "target": 220.0},
+    {"symbol": "SCHA", "name": "Schwab US Small-Cap ETF", "type": "etf", "target": 95.0},
+    # Healthcare innovation
+    {"symbol": "MRNA", "name": "Moderna Inc.", "type": "stock", "target": 45.0},
+    {"symbol": "XBI", "name": "SPDR S&P Biotech ETF", "type": "etf", "target": 85.0},
+    # Cybersecurity
+    {"symbol": "CRWD", "name": "CrowdStrike Holdings", "type": "stock", "target": 380.0},
+    {"symbol": "ZS", "name": "Zscaler Inc.", "type": "stock", "target": 200.0},
+    # Cryptocurrencies
+    {"symbol": "DOGE-USD", "name": "Dogecoin", "type": "crypto", "target": 0.42},
+    {"symbol": "SOL-USD", "name": "Solana", "type": "crypto", "target": 185.0},
+    {"symbol": "AVAX-USD", "name": "Avalanche", "type": "crypto", "target": 42.0},
+    {"symbol": "MATIC-USD", "name": "Polygon", "type": "crypto", "target": 1.20},
+    {"symbol": "LINK-USD", "name": "Chainlink", "type": "crypto", "target": 28.0},
 ]
 
 LOREM = [
