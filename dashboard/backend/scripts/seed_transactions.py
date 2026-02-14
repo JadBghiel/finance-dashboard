@@ -17,8 +17,45 @@ import argparse
 import random
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timedelta
+from typing import Optional
+
+try:
+    import psycopg2
+    from psycopg2 import extras as pg_extras
+except Exception:
+    psycopg2 = None
+    pg_extras = None
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'finance.db'))
+
+def get_db_url() -> Optional[str]:
+    return os.getenv("STORAGE_DATABASE_URL") or os.getenv("DATABASE_URL")
+
+def is_postgres_url(url: str | None) -> bool:
+    if not url:
+        return False
+    return url.startswith("postgres://") or url.startswith("postgresql://")
+
+def normalize_pg_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    return url
+
+def connect_db():
+    url = get_db_url()
+    if is_postgres_url(url):
+        if psycopg2 is None:
+            raise RuntimeError("psycopg2 is required for Postgres seeding")
+        pg_url = normalize_pg_url(url)
+        conn = psycopg2.connect(pg_url)
+        return conn, True
+    # default: sqlite
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn, False
+
+def ph(is_postgres: bool) -> str:
+    return "%s" if is_postgres else "?"
 
 # control how far back to seed in days, default 10 years
 DAYS_BACK = 3650
@@ -126,7 +163,19 @@ LOREM = [
 def quantize_amount(x: float) -> Decimal:
     return (Decimal(x).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
-def get_or_create_category(conn: sqlite3.Connection, name: str, ctype: str) -> int:
+def get_or_create_category(conn, name: str, ctype: str, is_postgres: bool) -> int:
+    placeholder = ph(is_postgres)
+    if is_postgres:
+        cur = conn.cursor()
+        cur.execute(f"SELECT id FROM categories WHERE name = {placeholder}", (name,))
+        r = cur.fetchone()
+        if r:
+            return r[0]
+        cur.execute(
+            f"INSERT INTO categories (name, type) VALUES ({placeholder}, {placeholder}) RETURNING id",
+            (name, ctype)
+        )
+        return cur.fetchone()[0]
     cur = conn.execute("SELECT id FROM categories WHERE name = ?", (name,))
     r = cur.fetchone()
     if r:
@@ -134,7 +183,19 @@ def get_or_create_category(conn: sqlite3.Connection, name: str, ctype: str) -> i
     cur = conn.execute("INSERT INTO categories (name, type) VALUES (?, ?)", (name, ctype))
     return cur.lastrowid
 
-def get_or_create_account(conn: sqlite3.Connection, name: str) -> int:
+def get_or_create_account(conn, name: str, is_postgres: bool) -> int:
+    placeholder = ph(is_postgres)
+    if is_postgres:
+        cur = conn.cursor()
+        cur.execute(f"SELECT id FROM accounts WHERE name = {placeholder}", (name,))
+        r = cur.fetchone()
+        if r:
+            return r[0]
+        cur.execute(
+            f"INSERT INTO accounts (name, emoji) VALUES ({placeholder}, {placeholder}) RETURNING id",
+            (name, None)
+        )
+        return cur.fetchone()[0]
     cur = conn.execute("SELECT id FROM accounts WHERE name = ?", (name,))
     r = cur.fetchone()
     if r:
@@ -147,35 +208,47 @@ def get_or_create_account(conn: sqlite3.Connection, name: str) -> int:
         cur = conn.execute("INSERT INTO accounts (name) VALUES (?)", (name,))
     return cur.lastrowid
 
-def insert_income(conn: sqlite3.Connection, amount: Decimal, currency: str, description: str, date_iso: str, category_id: int, account_id: int):
-    conn.execute(
-        "INSERT INTO incomes (amount, currency, description, date, category_id, account_id) VALUES (?, ?, ?, ?, ?, ?)",
-        (str(amount), currency, description, date_iso, category_id, account_id)
+def insert_income(conn, amount: Decimal, currency: str, description: str, date_iso: str, category_id: int, account_id: int, is_postgres: bool):
+    placeholder = ph(is_postgres)
+    sql = (
+        "INSERT INTO incomes (amount, currency, description, date, category_id, account_id) "
+        f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
     )
+    cur = conn.cursor() if is_postgres else conn
+    cur.execute(sql, (str(amount), currency, description, date_iso, category_id, account_id))
 
-def insert_expense(conn: sqlite3.Connection, amount: Decimal, currency: str, description: str, date_iso: str, category_id: int, account_id: int):
-    conn.execute(
-        "INSERT INTO expenses (amount, currency, description, date, category_id, account_id) VALUES (?, ?, ?, ?, ?, ?)",
-        (str(amount), currency, description, date_iso, category_id, account_id)
+def insert_expense(conn, amount: Decimal, currency: str, description: str, date_iso: str, category_id: int, account_id: int, is_postgres: bool):
+    placeholder = ph(is_postgres)
+    sql = (
+        "INSERT INTO expenses (amount, currency, description, date, category_id, account_id) "
+        f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
     )
+    cur = conn.cursor() if is_postgres else conn
+    cur.execute(sql, (str(amount), currency, description, date_iso, category_id, account_id))
 
-def insert_investment(conn: sqlite3.Connection, symbol: str, name: str, inv_type: str, quantity: Decimal,
+def insert_investment(conn, symbol: str, name: str, inv_type: str, quantity: Decimal,
                       purchase_price: Decimal, purchase_date: str, current_price: Decimal,
-                      currency: str, account_id: int, notes: str = ""):
-    conn.execute(
-        """
-        INSERT INTO investments
-        (symbol, name, type, quantity, purchase_price, purchase_date, current_price, currency, account_id, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
+                      currency: str, account_id: int, notes: str = "", is_postgres: bool = False):
+    placeholder = ph(is_postgres)
+    sql = (
+        "INSERT INTO investments "
+        "(symbol, name, type, quantity, purchase_price, purchase_date, current_price, currency, account_id, notes) "
+        f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+    )
+    cur = conn.cursor() if is_postgres else conn
+    cur.execute(
+        sql,
         (symbol, name, inv_type, str(quantity), str(purchase_price), purchase_date, str(current_price), currency, account_id, notes)
     )
 
-def insert_watchlist(conn: sqlite3.Connection, symbol: str, name: str, inv_type: str, target_price: Decimal, notes: str = ""):
-    conn.execute(
-        "INSERT INTO watchlist (symbol, name, type, target_price, notes) VALUES (?, ?, ?, ?, ?)",
-        (symbol, name, inv_type, str(target_price), notes)
+def insert_watchlist(conn, symbol: str, name: str, inv_type: str, target_price: Decimal, notes: str = "", is_postgres: bool = False):
+    placeholder = ph(is_postgres)
+    sql = (
+        "INSERT INTO watchlist (symbol, name, type, target_price, notes) "
+        f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
     )
+    cur = conn.cursor() if is_postgres else conn
+    cur.execute(sql, (symbol, name, inv_type, str(target_price), notes))
 
 def random_past_date(days_back=DAYS_BACK):
     """
@@ -186,7 +259,7 @@ def random_past_date(days_back=DAYS_BACK):
     d = datetime.now() - timedelta(days=random.randint(0, days_back))
     return d.replace(hour=12, minute=0, second=0, microsecond=0).isoformat()  # ISO with 'T'
 
-def delete_entries(conn: sqlite3.Connection, count: int, table: str = 'both', randomize: bool = False) -> int:
+def delete_entries(conn, count: int, table: str = 'both', randomize: bool = False, is_postgres: bool = False) -> int:
     """
     delete `count` entries from the db
     - table: 'incomes', 'expenses' or 'both'
@@ -254,7 +327,8 @@ def delete_entries(conn: sqlite3.Connection, count: int, table: str = 'both', ra
     deleted = 0
     for rid, tbl in to_delete:
         # delete by id per-table
-        cur.execute(f"DELETE FROM {tbl} WHERE id = ?", (rid,))
+        placeholder = ph(is_postgres)
+        cur.execute(f"DELETE FROM {tbl} WHERE id = {placeholder}", (rid,))
         deleted += cur.rowcount if cur.rowcount is not None else 1
 
     conn.commit()
@@ -290,13 +364,13 @@ def main():
             if idx + 1 < len(sys.argv):
                 table = sys.argv[idx + 1]
 
-        if not os.path.exists(DB_PATH):
+        if not os.path.exists(DB_PATH) and not is_postgres_url(get_db_url()):
             print(f"DB not found at {DB_PATH}")
             return
 
-        conn = sqlite3.connect(DB_PATH)
+        conn, is_postgres = connect_db()
         try:
-            deleted = delete_entries(conn, delete_count, table=table, randomize=randomize)
+            deleted = delete_entries(conn, delete_count, table=table, randomize=randomize, is_postgres=is_postgres)
             print(f"Deleted {deleted} rows.")
         finally:
             conn.close()
@@ -306,17 +380,21 @@ def main():
     if args.years and args.years > 0:
         days_back = args.years * 365
 
-    if not os.path.exists(DB_PATH):
+    if not os.path.exists(DB_PATH) and not is_postgres_url(get_db_url()):
         print(f"DB not found at {DB_PATH}")
         return
 
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn, is_postgres = connect_db()
 
     try:
         # make sure tables exist
-        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
-        found = {r["name"] for r in cur.fetchall()}
+        if is_postgres:
+            cur = conn.cursor()
+            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
+            found = {r[0] for r in cur.fetchall()}
+        else:
+            cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
+            found = {r["name"] for r in cur.fetchall()}
         needed = {'accounts','categories','incomes','expenses'}
         if not needed.issubset(found):
             print("Required tables not found in DB. Check migrations/models.")
@@ -325,15 +403,15 @@ def main():
         # ensure categories & accounts exist (create if missing)
         category_name_to_id = {}
         for name in INCOME_CATEGORIES:
-            cid = get_or_create_category(conn, name, 'income')
+            cid = get_or_create_category(conn, name, 'income', is_postgres)
             category_name_to_id[name] = cid
         for name in EXPENSE_CATEGORIES:
-            cid = get_or_create_category(conn, name, 'expense')
+            cid = get_or_create_category(conn, name, 'expense', is_postgres)
             category_name_to_id[name] = cid
 
         account_name_to_id = {}
         for name in ACCOUNTS:
-            aid = get_or_create_account(conn, name)
+            aid = get_or_create_account(conn, name, is_postgres)
             account_name_to_id[name] = aid
 
         conn.commit()
@@ -353,7 +431,7 @@ def main():
             cid = category_name_to_id[cat]
             aid = account_name_to_id[acc]
 
-            insert_income(conn, amt, curc, desc, date_iso, cid, aid)
+            insert_income(conn, amt, curc, desc, date_iso, cid, aid, is_postgres)
             incomes_total += amt
 
         conn.commit()
@@ -385,7 +463,7 @@ def main():
             cid = category_name_to_id[cat]
             aid = account_name_to_id[acc]
 
-            insert_expense(conn, amt, curc, desc, date_iso, cid, aid)
+            insert_expense(conn, amt, curc, desc, date_iso, cid, aid, is_postgres)
             expenses_total += amt
 
             # if adding this would exceed allowed by a hair due to rounding, clamp and adjust
@@ -396,10 +474,17 @@ def main():
                 if new_amt < Decimal("0.01"):
                     new_amt = Decimal("1.00")
                 # update last row: find last inserted rowid for expenses
-                last_id_row = conn.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1").fetchone()
+                if is_postgres:
+                    cur2 = conn.cursor()
+                    cur2.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1")
+                    last_id_row = cur2.fetchone()
+                else:
+                    last_id_row = conn.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1").fetchone()
                 if last_id_row:
                     last_id = last_id_row[0]
-                    conn.execute("UPDATE expenses SET amount = ? WHERE id = ?", (str(new_amt), last_id))
+                    placeholder = ph(is_postgres)
+                    cur3 = conn.cursor() if is_postgres else conn
+                    cur3.execute(f"UPDATE expenses SET amount = {placeholder} WHERE id = {placeholder}", (str(new_amt), last_id))
                     expenses_total = expenses_total - (amt - new_amt)
 
         conn.commit()
@@ -436,7 +521,8 @@ def main():
                         current_price=current,
                         currency=item["currency"],
                         account_id=investment_account_id or list(account_name_to_id.values())[0],
-                        notes=notes
+                        notes=notes,
+                        is_postgres=is_postgres
                     )
                 conn.commit()
 
@@ -455,7 +541,8 @@ def main():
                         name=item["name"],
                         inv_type=item["type"],
                         target_price=target,
-                        notes=notes
+                        notes=notes,
+                        is_postgres=is_postgres
                     )
                 conn.commit()
 
