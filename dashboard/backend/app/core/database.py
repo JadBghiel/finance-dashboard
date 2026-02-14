@@ -5,7 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 # get database url from environment (Neon Postgres on Vercel, SQLite locally)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finance.db")
+# try STORAGE_DATABASE_URL first (Vercel Neon prefix), then DATABASE_URL, then fallback to sqlite
+DATABASE_URL = os.getenv("STORAGE_DATABASE_URL") or os.getenv("DATABASE_URL", "sqlite:///./finance.db")
 
 # debug: log which db we're connecting to
 print(f"[database] DATABASE_URL env: {'SET (postgres)' if 'postgres' in DATABASE_URL else 'NOT SET (using sqlite)'}")
