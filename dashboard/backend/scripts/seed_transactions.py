@@ -3,7 +3,7 @@ simple seeder for finance.db
 
 usage:
     cd dashboard/backend
-    python3 scripts/seed_transactions.py --incomes <amount> --expenses <amount> --investments <amount> --watchlist <amount>
+    python3 scripts/seed_transactions.py --incomes <amount> --expenses <amount> --investments <amount> --watchlist <amount> --db auto|sqlite|postgres
 
 the script will:
  - ensure requested categories/accounts exist (create if missing)
@@ -41,8 +41,21 @@ def normalize_pg_url(url: str) -> str:
         return url.replace("postgres://", "postgresql://", 1)
     return url
 
-def connect_db():
+def connect_db(db_mode: str = "auto"):
     url = get_db_url()
+    if db_mode == "postgres":
+        if not url:
+            raise RuntimeError("STORAGE_DATABASE_URL or DATABASE_URL is required for Postgres seeding")
+        if psycopg2 is None:
+            raise RuntimeError("psycopg2 is required for Postgres seeding")
+        pg_url = normalize_pg_url(url)
+        conn = psycopg2.connect(pg_url)
+        return conn, True
+    if db_mode == "sqlite":
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn, False
+    # auto
     if is_postgres_url(url):
         if psycopg2 is None:
             raise RuntimeError("psycopg2 is required for Postgres seeding")
@@ -342,6 +355,7 @@ def main():
     p.add_argument("--investments", type=int, default=8, help="Number of investment positions to create")
     p.add_argument("--watchlist", type=int, default=6, help="Number of watchlist items to create")
     p.add_argument("--years", type=int, default=None, help="Spread entries across N years (overrides internal DAYS_BACK when provided)")
+    p.add_argument("--db", type=str, default="auto", choices=["auto", "sqlite", "postgres"], help="Target database: auto|sqlite|postgres")
     args, unknown = p.parse_known_args()
 
     if len(sys.argv) > 1 and sys.argv[1] == 'delete':
@@ -368,7 +382,7 @@ def main():
             print(f"DB not found at {DB_PATH}")
             return
 
-        conn, is_postgres = connect_db()
+        conn, is_postgres = connect_db(args.db)
         try:
             deleted = delete_entries(conn, delete_count, table=table, randomize=randomize, is_postgres=is_postgres)
             print(f"Deleted {deleted} rows.")
@@ -380,11 +394,11 @@ def main():
     if args.years and args.years > 0:
         days_back = args.years * 365
 
-    if not os.path.exists(DB_PATH) and not is_postgres_url(get_db_url()):
+    if not os.path.exists(DB_PATH) and not is_postgres_url(get_db_url()) and args.db != "postgres":
         print(f"DB not found at {DB_PATH}")
         return
 
-    conn, is_postgres = connect_db()
+    conn, is_postgres = connect_db(args.db)
 
     try:
         # make sure tables exist
