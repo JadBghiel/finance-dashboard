@@ -5,6 +5,10 @@ usage:
     cd dashboard/backend
     python3 scripts/seed_transactions.py --incomes <amount> --expenses <amount> --investments <amount> --watchlist <amount> --db auto|sqlite|postgres
 
+examples:
+    python3 scripts/seed_transactions.py --incomes 10 --expenses 5 --investments 3 --watchlist 3 --db sqlite
+    STORAGE_DATABASE_URL="postgresql://..." python3 scripts/seed_transactions.py --incomes 10 --expenses 5 --investments 3 --watchlist 3 --db postgres
+
 the script will:
  - ensure requested categories/accounts exist (create if missing)
  - insert the requested number of income and expense rows
@@ -31,7 +35,7 @@ DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'finance
 def get_db_url() -> Optional[str]:
     return os.getenv("STORAGE_DATABASE_URL") or os.getenv("DATABASE_URL")
 
-def is_postgres_url(url: str | None) -> bool:
+def is_postgres_url(url: Optional[str]) -> bool:
     if not url:
         return False
     return url.startswith("postgres://") or url.startswith("postgresql://")

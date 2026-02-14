@@ -30,6 +30,7 @@ Python dependencies (stored in dashboard/backend/requirements.txt):
     - alembic
     - pydantic[email]
     - requests
+    - psycopg2-binary
 
 
 Install backend dependencies:
@@ -73,14 +74,18 @@ This script will automatically:
 - Dark mode toggleable
 - Export data to CSV/SQL/PDF
 
-## GENERATE ENTRIES (local only)
-For testing purposes, you can use the included python script to generate entries for both INCOME and EXPENSES, and test the project
+## GENERATE ENTRIES (local and neon)
+For testing purposes, you can use the included python script to generate entries for incomes, expenses, investments, and watchlist.
 
 In the root of the project (with python activated or installed):
 
-     $ python3 dashboard/backend/scripts/seed_transactions.py --incomes <amount> --expenses <amount>
+    $ python3 dashboard/backend/scripts/seed_transactions.py --incomes <amount> --expenses <amount> --investments <amount> --watchlist <amount> --db sqlite
+
+To seed Neon (Postgres), pass the connection URL and set `--db postgres`:
+
+    $ STORAGE_DATABASE_URL="postgresql://..." python3 dashboard/backend/scripts/seed_transactions.py --incomes 10 --expenses 5 --investments 3 --watchlist 3 --db postgres
 
 ### Delete entries:
-    $ python3 dashboard/backend/scripts/seed_transactions.py delete <count> [--random] --table <both> OR <expenses> OR <incomes>
+    $ python3 dashboard/backend/scripts/seed_transactions.py delete <count> [--random] --table <both>|<expenses>|<incomes>|<investments>|<watchlist>|<all>
 
-- If the ```--random``` argument is not specified it will delete the newest entries
+- If the `--random` argument is not specified it will delete the newest entries
