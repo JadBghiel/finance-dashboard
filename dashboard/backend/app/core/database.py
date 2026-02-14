@@ -7,12 +7,17 @@ from sqlalchemy.pool import NullPool
 # get database url from environment (Neon Postgres on Vercel, SQLite locally)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finance.db")
 
+# debug: log which db we're connecting to
+print(f"[database] DATABASE_URL env: {'SET (postgres)' if 'postgres' in DATABASE_URL else 'NOT SET (using sqlite)'}")
+
 # neon uses postgres:// but sqlalchemy needs postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # detect if using postgres or sqlite
 is_postgres = DATABASE_URL.startswith("postgresql://")
+
+print(f"[database] Connecting to: {'Postgres (Neon)' if is_postgres else 'SQLite (local)'}")
 
 # configure engine based on database type
 if is_postgres:
