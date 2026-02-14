@@ -1,17 +1,36 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from .config import DATABASE_URL
 from sqlalchemy.pool import NullPool
 
-#  disable the
-# same-thread check and avoid persistent pools which can cause locking in uvicorn multhreding
-engine = create_engine(
-    DATABASE_URL,
-    future=True,
-    connect_args={"check_same_thread": False},
-    poolclass=NullPool,
-)
+# get database url from environment (Neon Postgres on Vercel, SQLite locally)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finance.db")
+
+# neon uses postgres:// but sqlalchemy needs postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# detect if using postgres or sqlite
+is_postgres = DATABASE_URL.startswith("postgresql://")
+
+# configure engine based on database type
+if is_postgres:
+    # postgres config (for Neon/Vercel)
+    engine = create_engine(
+        DATABASE_URL,
+        future=True,
+        poolclass=NullPool,
+        echo=False,
+    )
+else:
+    # sqlite config (for local dev)
+    engine = create_engine(
+        DATABASE_URL,
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=NullPool,
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

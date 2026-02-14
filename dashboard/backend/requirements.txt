@@ -6,3 +6,4 @@ alembic
 pydantic[email]
 requests
 yfinance
+psycopg2-binary
