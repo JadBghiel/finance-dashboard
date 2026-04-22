@@ -12,13 +12,14 @@ import DownloadIcon from '@mui/icons-material/Download';
 import StorageIcon from '@mui/icons-material/Storage';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import api from '../services/api';
 
 interface ExportDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_BASE = (api.defaults.baseURL || '/api').replace(/\/+$/, '');
 
 const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose }) => {
   const handleDownload = (type: 'csv' | 'sql' | 'pdf') => {
