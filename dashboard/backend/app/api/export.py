@@ -4,77 +4,125 @@ export endpoints - download db as sql, csv, or pdf
 import os
 import csv
 import io
-import sqlite3
 from datetime import datetime
-from fastapi import APIRouter, Response
-from fastapi.responses import StreamingResponse
+from decimal import Decimal
+from typing import Dict, List
+
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy import inspect, text
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
 
 router = APIRouter()
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "finance.db"))
 
+
+def _ident(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _to_float(value) -> float:
+    if value is None:
+        return 0.0
+    return float(value)
+
+
+def _sql_literal(value) -> str:
+    if value is None:
+        return "NULL"
+    if isinstance(value, bool):
+        return "TRUE" if value else "FALSE"
+    if isinstance(value, (int, float, Decimal)):
+        return str(value)
+    if isinstance(value, datetime):
+        return "'" + value.isoformat(sep=" ") + "'"
+    if isinstance(value, bytes):
+        return "X'" + value.hex() + "'"
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _load_table_names(db: Session) -> List[str]:
+    table_names = inspect(db.bind).get_table_names()  # type: ignore[arg-type]
+    skip = {"alembic_version", "sqlite_sequence"}
+    return [t for t in table_names if t not in skip and not t.startswith("sqlite_") and not t.startswith("alembic_")]
+
+
+def _month_key(value) -> str:
+    if value is None:
+        return "n/a"
+    s = str(value)
+    return s[:7] if len(s) >= 7 else s
+
 @router.get("/export/sql")
-def export_sql():
-    """download the raw sqlite db file"""
-    if not os.path.exists(DB_PATH):
-        return Response(content="db not found", status_code=404)
-    
-    with open(DB_PATH, "rb") as f:
-        content = f.read()
-    
+def export_sql(db: Session = Depends(get_db)):
+    """export all tables as a sql script (works for sqlite and postgres)."""
+    tables = _load_table_names(db)
+    if not tables:
+        return Response(content="no tables found", status_code=404)
+
+    lines = [
+        f"-- personal finance export ({datetime.now().isoformat()})",
+        "-- generated from current database",
+        "",
+    ]
+
+    for table in tables:
+        table_ident = _ident(table)
+        cols = [c["name"] for c in inspect(db.bind).get_columns(table)]  # type: ignore[arg-type]
+        col_list = ", ".join(_ident(c) for c in cols)
+        lines.append(f"-- table: {table}")
+        result = db.execute(text(f"SELECT * FROM {table_ident}"))
+        rows = result.mappings().all()
+        if not rows:
+            lines.append(f"-- no rows in {table}")
+            lines.append("")
+            continue
+        for row in rows:
+            values = ", ".join(_sql_literal(row.get(c)) for c in cols)
+            lines.append(f"INSERT INTO {table_ident} ({col_list}) VALUES ({values});")
+        lines.append("")
+
+    content = "\n".join(lines)
     return Response(
         content=content,
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename=finance_{datetime.now().strftime('%Y%m%d')}.db"}
+        media_type="application/sql",
+        headers={"Content-Disposition": f"attachment; filename=finance_{datetime.now().strftime('%Y%m%d')}.sql"},
     )
 
 @router.get("/export/csv")
-def export_csv():
-    """export all tables as a single csv (concatenated with headers)"""
-    if not os.path.exists(DB_PATH):
-        return Response(content="db not found", status_code=404)
-    
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    
-    # get all table names
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'alembic_%'")
-    tables = [row[0] for row in cursor.fetchall()]
-    
+def export_csv(db: Session = Depends(get_db)):
+    """export all tables as a single csv (concatenated with headers)."""
+    tables = _load_table_names(db)
+    if not tables:
+        return Response(content="no tables found", status_code=404)
+
     output = io.StringIO()
-    
+
     for table in tables:
         output.write(f"\n# === {table} ===\n")
-        cursor.execute(f"SELECT * FROM {table}")
-        rows = cursor.fetchall()
+        table_ident = _ident(table)
+        result = db.execute(text(f"SELECT * FROM {table_ident}"))
+        rows = result.mappings().all()
         if rows:
-            columns = rows[0].keys()
+            columns = list(rows[0].keys())
             writer = csv.writer(output)
             writer.writerow(columns)
             for row in rows:
                 writer.writerow([row[col] for col in columns])
         output.write("\n")
-    
-    conn.close()
-    
+
     content = output.getvalue()
     return Response(
         content=content,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=finance_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=finance_{datetime.now().strftime('%Y%m%d')}.csv"},
     )
 
 @router.get("/export/pdf")
-def export_pdf():
-    """export a complete pdf report with all financial data"""
-    if not os.path.exists(DB_PATH):
-        return Response(content="db not found", status_code=404)
-    
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    
+def export_pdf(db: Session = Depends(get_db)):
+    """export a complete pdf report with all financial data (sqlite/postgres)."""
     # build text content
     lines = []
     lines.append("=" * 60)
@@ -88,41 +136,35 @@ def export_pdf():
     lines.append("SUMMARY")
     lines.append("-" * 60)
     
-    cursor.execute("SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total FROM incomes")
-    row = cursor.fetchone()
-    total_income = float(row['total'])
+    row = db.execute(text("SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total FROM incomes")).mappings().first() or {"cnt": 0, "total": 0}
+    total_income = _to_float(row["total"])
     lines.append(f"  Total Income:     {row['cnt']:>6} entries   ${total_income:>12,.2f}")
     
-    cursor.execute("SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total FROM expenses")
-    row = cursor.fetchone()
-    total_expense = float(row['total'])
+    row = db.execute(text("SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total FROM expenses")).mappings().first() or {"cnt": 0, "total": 0}
+    total_expense = _to_float(row["total"])
     lines.append(f"  Total Expenses:   {row['cnt']:>6} entries   ${total_expense:>12,.2f}")
     
     net = total_income - total_expense
     lines.append(f"  Net Balance:                       ${net:>12,.2f}")
     lines.append("")
     
-    cursor.execute("SELECT COUNT(*) as cnt FROM accounts")
-    row = cursor.fetchone()
+    row = db.execute(text("SELECT COUNT(*) as cnt FROM accounts")).mappings().first() or {"cnt": 0}
     lines.append(f"  Accounts:         {row['cnt']:>6}")
     
-    cursor.execute("SELECT COUNT(*) as cnt FROM categories")
-    row = cursor.fetchone()
+    row = db.execute(text("SELECT COUNT(*) as cnt FROM categories")).mappings().first() or {"cnt": 0}
     lines.append(f"  Categories:       {row['cnt']:>6}")
     
     # investments summary
     try:
-        cursor.execute("SELECT COUNT(*) as cnt, COALESCE(SUM(quantity * COALESCE(current_price, purchase_price)), 0) as total FROM investments")
-        row = cursor.fetchone()
-        lines.append(f"  Investments:      {row['cnt']:>6} positions ${float(row['total']):>12,.2f}")
-    except:
+        row = db.execute(text("SELECT COUNT(*) as cnt, COALESCE(SUM(quantity * COALESCE(current_price, purchase_price)), 0) as total FROM investments")).mappings().first() or {"cnt": 0, "total": 0}
+        lines.append(f"  Investments:      {row['cnt']:>6} positions ${_to_float(row['total']):>12,.2f}")
+    except Exception:
         pass
     
     try:
-        cursor.execute("SELECT COUNT(*) as cnt FROM watchlist")
-        row = cursor.fetchone()
+        row = db.execute(text("SELECT COUNT(*) as cnt FROM watchlist")).mappings().first() or {"cnt": 0}
         lines.append(f"  Watchlist:        {row['cnt']:>6} items")
-    except:
+    except Exception:
         pass
     
     lines.append("")
@@ -131,16 +173,15 @@ def export_pdf():
     lines.append("-" * 60)
     lines.append("ACCOUNTS")
     lines.append("-" * 60)
-    cursor.execute("SELECT id, name, emoji FROM accounts ORDER BY name")
-    accounts = cursor.fetchall()
+    accounts = db.execute(text("SELECT id, name, emoji FROM accounts ORDER BY name")).mappings().all()
     for acc in accounts:
-        emoji = acc['emoji'] or ''
+        emoji = acc["emoji"] or ""
         lines.append(f"  {emoji} {acc['name']}")
         # get account balance
-        cursor.execute("SELECT COALESCE(SUM(amount), 0) as inc FROM incomes WHERE account_id = ?", (acc['id'],))
-        inc = float(cursor.fetchone()['inc'])
-        cursor.execute("SELECT COALESCE(SUM(amount), 0) as exp FROM expenses WHERE account_id = ?", (acc['id'],))
-        exp = float(cursor.fetchone()['exp'])
+        inc_row = db.execute(text("SELECT COALESCE(SUM(amount), 0) as inc FROM incomes WHERE account_id = :aid"), {"aid": acc["id"]}).mappings().first() or {"inc": 0}
+        exp_row = db.execute(text("SELECT COALESCE(SUM(amount), 0) as exp FROM expenses WHERE account_id = :aid"), {"aid": acc["id"]}).mappings().first() or {"exp": 0}
+        inc = _to_float(inc_row["inc"])
+        exp = _to_float(exp_row["exp"])
         balance = inc - exp
         lines.append(f"      Income: ${inc:,.2f}  |  Expenses: ${exp:,.2f}  |  Balance: ${balance:,.2f}")
     lines.append("")
@@ -149,11 +190,10 @@ def export_pdf():
     lines.append("-" * 60)
     lines.append("CATEGORIES (with totals)")
     lines.append("-" * 60)
-    cursor.execute("SELECT id, name FROM categories ORDER BY name")
-    categories = cursor.fetchall()
+    categories = db.execute(text("SELECT id, name FROM categories ORDER BY name")).mappings().all()
     for cat in categories:
-        cursor.execute("SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE category_id = ?", (cat['id'],))
-        total = float(cursor.fetchone()['total'])
+        total_row = db.execute(text("SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE category_id = :cid"), {"cid": cat["id"]}).mappings().first() or {"total": 0}
+        total = _to_float(total_row["total"])
         if total > 0:
             lines.append(f"  {cat['name']:<30} ${total:>12,.2f}")
     lines.append("")
@@ -162,32 +202,32 @@ def export_pdf():
     lines.append("-" * 60)
     lines.append("INCOME BY MONTH")
     lines.append("-" * 60)
-    cursor.execute("""
-        SELECT strftime('%Y-%m', date) as month, SUM(amount) as total, COUNT(*) as cnt
-        FROM incomes 
-        WHERE date IS NOT NULL
-        GROUP BY strftime('%Y-%m', date)
-        ORDER BY month DESC
-        LIMIT 12
-    """)
-    for row in cursor.fetchall():
-        lines.append(f"  {row['month']}:  {row['cnt']:>4} entries   ${float(row['total']):>12,.2f}")
+    income_rows = db.execute(text("SELECT date, amount FROM incomes WHERE date IS NOT NULL")).mappings().all()
+    income_by_month: Dict[str, Dict[str, float]] = {}
+    for row in income_rows:
+        month = _month_key(row["date"])
+        bucket = income_by_month.setdefault(month, {"total": 0.0, "cnt": 0.0})
+        bucket["total"] += _to_float(row["amount"])
+        bucket["cnt"] += 1
+    for month in sorted(income_by_month.keys(), reverse=True)[:12]:
+        bucket = income_by_month[month]
+        lines.append(f"  {month}:  {int(bucket['cnt']):>4} entries   ${bucket['total']:>12,.2f}")
     lines.append("")
     
     #  EXPENSE BREAKDOWN BY MONTH 
     lines.append("-" * 60)
     lines.append("EXPENSES BY MONTH")
     lines.append("-" * 60)
-    cursor.execute("""
-        SELECT strftime('%Y-%m', date) as month, SUM(amount) as total, COUNT(*) as cnt
-        FROM expenses 
-        WHERE date IS NOT NULL
-        GROUP BY strftime('%Y-%m', date)
-        ORDER BY month DESC
-        LIMIT 12
-    """)
-    for row in cursor.fetchall():
-        lines.append(f"  {row['month']}:  {row['cnt']:>4} entries   ${float(row['total']):>12,.2f}")
+    expense_rows = db.execute(text("SELECT date, amount FROM expenses WHERE date IS NOT NULL")).mappings().all()
+    expense_by_month: Dict[str, Dict[str, float]] = {}
+    for row in expense_rows:
+        month = _month_key(row["date"])
+        bucket = expense_by_month.setdefault(month, {"total": 0.0, "cnt": 0.0})
+        bucket["total"] += _to_float(row["amount"])
+        bucket["cnt"] += 1
+    for month in sorted(expense_by_month.keys(), reverse=True)[:12]:
+        bucket = expense_by_month[month]
+        lines.append(f"  {month}:  {int(bucket['cnt']):>4} entries   ${bucket['total']:>12,.2f}")
     lines.append("")
     
     #  INVESTMENTS SECTION 
@@ -195,17 +235,16 @@ def export_pdf():
         lines.append("-" * 60)
         lines.append("INVESTMENT POSITIONS")
         lines.append("-" * 60)
-        cursor.execute("""
-            SELECT symbol, name, type, quantity, purchase_price, current_price, currency
+        investments = db.execute(text("""
+            SELECT symbol, name, "type", quantity, purchase_price, current_price, currency
             FROM investments
-            ORDER BY type, symbol
-        """)
-        investments = cursor.fetchall()
+            ORDER BY "type", symbol
+        """)).mappings().all()
         if investments:
             for inv in investments:
-                qty = float(inv['quantity'] or 0)
-                purchase = float(inv['purchase_price'] or 0)
-                current = float(inv['current_price'] or purchase)
+                qty = _to_float(inv["quantity"])
+                purchase = _to_float(inv["purchase_price"])
+                current = _to_float(inv["current_price"]) or purchase
                 value = qty * current
                 cost = qty * purchase
                 pnl = value - cost
@@ -218,7 +257,7 @@ def export_pdf():
         else:
             lines.append("  No investment positions")
         lines.append("")
-    except:
+    except Exception:
         pass
     
     #  WATCHLIST SECTION 
@@ -226,60 +265,57 @@ def export_pdf():
         lines.append("-" * 60)
         lines.append("WATCHLIST")
         lines.append("-" * 60)
-        cursor.execute("SELECT symbol, name, type, target_price, notes FROM watchlist ORDER BY symbol")
-        watchlist = cursor.fetchall()
+        watchlist = db.execute(text("SELECT symbol, name, ""type"", target_price, notes FROM watchlist ORDER BY symbol")).mappings().all()
         if watchlist:
             for w in watchlist:
-                target = f"target: ${float(w['target_price']):,.2f}" if w['target_price'] else "no target"
+                target = f"target: ${_to_float(w['target_price']):,.2f}" if w['target_price'] is not None else "no target"
                 lines.append(f"  {w['symbol']:<8} {w['type']:<12} {target}")
                 if w['notes']:
-                    lines.append(f"           Note: {w['notes'][:50]}")
+                    lines.append(f"           Note: {str(w['notes'])[:50]}")
         else:
             lines.append("  No watchlist items")
         lines.append("")
-    except:
+    except Exception:
         pass
     
     #  RECENT TRANSACTIONS 
     lines.append("-" * 60)
     lines.append("RECENT INCOME (last 20)")
     lines.append("-" * 60)
-    cursor.execute("""
+    income_recent = db.execute(text("""
         SELECT i.date, i.amount, i.currency, i.description, a.name as account_name
         FROM incomes i
         LEFT JOIN accounts a ON i.account_id = a.id
         ORDER BY i.date DESC LIMIT 20
-    """)
-    for row in cursor.fetchall():
-        date_str = row['date'][:10] if row['date'] else 'n/a'
+    """)).mappings().all()
+    for row in income_recent:
+        date_str = str(row['date'])[:10] if row['date'] else 'n/a'
         desc = (row['description'] or '')[:35]
         acc = (row['account_name'] or 'n/a')[:15]
-        lines.append(f"  {date_str}  ${float(row['amount']):>10,.2f} {row['currency']}  {acc:<15}  {desc}")
+        lines.append(f"  {date_str}  ${_to_float(row['amount']):>10,.2f} {row['currency']}  {acc:<15}  {desc}")
     lines.append("")
     
     lines.append("-" * 60)
     lines.append("RECENT EXPENSES (last 20)")
     lines.append("-" * 60)
-    cursor.execute("""
+    expense_recent = db.execute(text("""
         SELECT e.date, e.amount, e.currency, e.description, a.name as account_name, c.name as category_name
         FROM expenses e
         LEFT JOIN accounts a ON e.account_id = a.id
         LEFT JOIN categories c ON e.category_id = c.id
         ORDER BY e.date DESC LIMIT 20
-    """)
-    for row in cursor.fetchall():
-        date_str = row['date'][:10] if row['date'] else 'n/a'
+    """)).mappings().all()
+    for row in expense_recent:
+        date_str = str(row['date'])[:10] if row['date'] else 'n/a'
         desc = (row['description'] or '')[:25]
         acc = (row['account_name'] or 'n/a')[:12]
         cat = (row['category_name'] or 'n/a')[:12]
-        lines.append(f"  {date_str}  ${float(row['amount']):>10,.2f}  {acc:<12}  {cat:<12}  {desc}")
+        lines.append(f"  {date_str}  ${_to_float(row['amount']):>10,.2f}  {acc:<12}  {cat:<12}  {desc}")
     lines.append("")
     
     lines.append("=" * 60)
     lines.append("        END OF REPORT")
     lines.append("=" * 60)
-    
-    conn.close()
     
     # create pdf
     text_content = "\n".join(lines)
@@ -288,7 +324,7 @@ def export_pdf():
     return Response(
         content=pdf_content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=finance_{datetime.now().strftime('%Y%m%d')}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=finance_{datetime.now().strftime('%Y%m%d')}.pdf"},
     )
 
 def _create_simple_pdf(text: str) -> bytes:
