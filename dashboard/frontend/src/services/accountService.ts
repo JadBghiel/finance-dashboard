@@ -20,7 +20,9 @@ export const deleteAccount = async (id: number): Promise<void> => {
   await api.delete(`/accounts/${id}/`);
 };
 
-export const getAccountBalance = async (id: number): Promise<any> => {
-  const response = await api.get(`/accounts/${id}/balance/`);
+export const getAccountBalance = async (id: number, baseCurrency?: string): Promise<any> => {
+  const response = await api.get(`/accounts/${id}/balance/`, {
+    params: baseCurrency ? { base_currency: baseCurrency } : undefined,
+  });
   return response.data;
 };

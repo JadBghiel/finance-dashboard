@@ -49,16 +49,17 @@ function Dashboard() {
 
   const [exportOpen, setExportOpen] = useState(false);
 
-  const fetchBalancesForAccounts = async (accs: any[]) => {
+  const fetchBalancesForAccounts = async (accs: any[], currencyOverride?: string) => {
     if (!accs || accs.length === 0) {
       setBalances({});
       return;
     }
     setLoadingBalances(true);
+    const targetCurrency = (currencyOverride || baseCurrency || 'USD').toUpperCase();
     const entries = await Promise.all(
       accs.map(async (a) => {
         try {
-          const b = await getAccountBalance(a.id);
+          const b = await getAccountBalance(a.id, targetCurrency);
           return [a.id, b] as const;
         } catch (e) {
           return [a.id, null] as const;
@@ -117,7 +118,7 @@ function Dashboard() {
     try {
       const updated = await updateBaseCurrency(baseCurrency);
       setBaseCurrency(updated.base_currency);
-      await fetchBalancesForAccounts(accounts);
+      await fetchBalancesForAccounts(accounts, updated.base_currency);
     } finally {
       setPending(false);
     }

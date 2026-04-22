@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from decimal import Decimal
 from app.schemas.account import Account, AccountCreate, AccountBalance, CurrencyBreakdown
@@ -33,7 +33,11 @@ def delete_existing_account(account_id: int, db: Session = Depends(get_db)):
     return None
 
 @router.get("/accounts/{account_id}/balance/", response_model=AccountBalance)
-def get_account_balance(account_id: int, db: Session = Depends(get_db)):
+def get_account_balance(
+    account_id: int,
+    base_currency: str | None = Query(default=None, description="optional base currency override"),
+    db: Session = Depends(get_db),
+):
     """
     calculate account net per currency (incomes-expenses), convert each currency to base currency
     using exchange utility (with caching and daily limit), returns breakdown and total in base currency
@@ -44,7 +48,7 @@ def get_account_balance(account_id: int, db: Session = Depends(get_db)):
 
     per_currency = crud_account.get_account_balance_per_currency(db, account_id)
 
-    base = config.BASE_CURRENCY.upper()
+    base = (base_currency or config.BASE_CURRENCY).upper()
     total_converted = Decimal("0")
     any_conversion_ok = False
     breakdown_items: List[CurrencyBreakdown] = []
