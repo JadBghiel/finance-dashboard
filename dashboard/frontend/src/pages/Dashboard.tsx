@@ -49,6 +49,26 @@ function Dashboard() {
 
   const [exportOpen, setExportOpen] = useState(false);
 
+  const fetchBalancesForAccounts = async (accs: any[]) => {
+    if (!accs || accs.length === 0) {
+      setBalances({});
+      return;
+    }
+    setLoadingBalances(true);
+    const entries = await Promise.all(
+      accs.map(async (a) => {
+        try {
+          const b = await getAccountBalance(a.id);
+          return [a.id, b] as const;
+        } catch (e) {
+          return [a.id, null] as const;
+        }
+      })
+    );
+    setBalances(Object.fromEntries(entries));
+    setLoadingBalances(false);
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -70,18 +90,7 @@ function Dashboard() {
   useEffect(() => {
     if (accounts.length === 0) return;
     (async () => {
-      setLoadingBalances(true);
-      const map: Record<number, any> = {};
-      for (const a of accounts) {
-        try {
-          const b = await getAccountBalance(a.id);
-          map[a.id] = b;
-        } catch (e) {
-          map[a.id] = null;
-        }
-      }
-      setBalances(map);
-      setLoadingBalances(false);
+      await fetchBalancesForAccounts(accounts);
     })();
   }, [accounts]);
 
@@ -106,9 +115,9 @@ function Dashboard() {
   const save = async () => {
     setPending(true);
     try {
-      await updateBaseCurrency(baseCurrency);
-      const accs = await getAccounts();
-      setAccounts(accs);
+      const updated = await updateBaseCurrency(baseCurrency);
+      setBaseCurrency(updated.base_currency);
+      await fetchBalancesForAccounts(accounts);
     } finally {
       setPending(false);
     }
