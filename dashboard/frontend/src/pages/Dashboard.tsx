@@ -91,9 +91,17 @@ function Dashboard() {
   useEffect(() => {
     if (accounts.length === 0) return;
     (async () => {
-      await fetchBalancesForAccounts(accounts);
+      await fetchBalancesForAccounts(accounts, baseCurrency);
     })();
   }, [accounts]);
+
+  // auto refresh converted balances whenever base currency changes
+  useEffect(() => {
+    if (accounts.length === 0) return;
+    (async () => {
+      await fetchBalancesForAccounts(accounts, baseCurrency);
+    })();
+  }, [baseCurrency]);
 
   useEffect(() => {
     fetchTransactions();
@@ -116,9 +124,11 @@ function Dashboard() {
   const save = async () => {
     setPending(true);
     try {
-      const updated = await updateBaseCurrency(baseCurrency);
-      setBaseCurrency(updated.base_currency);
-      await fetchBalancesForAccounts(accounts, updated.base_currency);
+      const targetCurrency = (baseCurrency || 'USD').toUpperCase();
+      await updateBaseCurrency(targetCurrency);
+      const confirmed = await getBaseCurrency();
+      setBaseCurrency(confirmed);
+      await fetchBalancesForAccounts(accounts, confirmed);
     } finally {
       setPending(false);
     }
