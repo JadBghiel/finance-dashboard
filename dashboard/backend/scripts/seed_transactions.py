@@ -63,6 +63,8 @@ def connect_db(db_mode: str = "auto"):
     if is_postgres_url(url):
         if psycopg2 is None:
             raise RuntimeError("psycopg2 is required for Postgres seeding")
+        if url is None:
+            raise RuntimeError("DATABASE_URL must be set for Postgres seeding")
         pg_url = normalize_pg_url(url)
         conn = psycopg2.connect(pg_url)
         return conn, True
@@ -503,8 +505,9 @@ def main():
             cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
             found = {r[0] for r in cur.fetchall()}
         else:
-            cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
-            found = {r["name"] for r in cur.fetchall()}
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','categories','incomes','expenses','investments','watchlist')")
+            found = {r[0] for r in cur.fetchall()}
         needed = {'accounts','categories','incomes','expenses'}
         if not needed.issubset(found):
             print("Required tables not found in DB. Check migrations/models.")
@@ -589,11 +592,13 @@ def main():
                     cur2.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1")
                     last_id_row = cur2.fetchone()
                 else:
-                    last_id_row = conn.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1").fetchone()
+                    cur2 = conn.cursor()
+                    cur2.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1")
+                    last_id_row = cur2.fetchone()
                 if last_id_row:
                     last_id = last_id_row[0]
                     placeholder = ph(is_postgres)
-                    cur3 = conn.cursor() if is_postgres else conn
+                    cur3 = conn.cursor()
                     cur3.execute(f"UPDATE expenses SET amount = {placeholder} WHERE id = {placeholder}", (str(new_amt), last_id))
                     expenses_total = expenses_total - (amt - new_amt)
 

@@ -4,6 +4,7 @@ from app.api import category, income, expense, account, settings, investments, w
 from sqlalchemy import text
 from app.core.database import engine, Base  # added Base
 import os
+from typing import Any
 
 # import models so metadata knows about investments/watchlist before create_all
 from app.models import account as _m_account  # noqa: F401
@@ -17,6 +18,16 @@ app = FastAPI(
     description="API for tracking income, expenses, savings, and investments",
     version="0.1.0",
 )
+
+
+@app.get("/")
+def root_status():
+    return {"status": "ok", "message": "personal finance dashboard api", "docs": "/docs"}
+
+
+@app.get("/health")
+def health_status():
+    return {"status": "ok"}
 
 # CORS configuration
 _default_origins = [
@@ -79,14 +90,20 @@ def _refresh_prices_on_startup():
         db = SessionLocal()
         try:
             rows = db.query(Investment).all()
-            symbols = sorted({(r.symbol or "").upper() for r in rows if r.symbol})
+            symbols = sorted(
+                {
+                    str(getattr(r, "symbol", "")).upper()
+                    for r in rows
+                    if getattr(r, "symbol", None) is not None and str(getattr(r, "symbol", "")) != ""
+                }
+            )
             if symbols:
                 prices = batch_get_last_prices(symbols)
                 for r in rows:
-                    s = (r.symbol or "").upper()
+                    s = str(getattr(r, "symbol", "")).upper()
                     p = prices.get(s)
                     if p is not None:
-                        r.current_price = Decimal(str(p))
+                        setattr(r, "current_price", Decimal(str(p)))
                 db.commit()
                 print(f"[startup] refreshed prices for {len(symbols)} symbols")
         finally:
