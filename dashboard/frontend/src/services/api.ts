@@ -2,10 +2,11 @@ import axios from 'axios';
 
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 const vercelBackendFallback = 'https://finance-dashboard-backend-virid.vercel.app';
-const isVercelHost = typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app');
+const host = typeof window !== 'undefined' ? window.location.hostname : '';
+const isLocalHost = host === 'localhost' || host === '127.0.0.1';
 
-// prefer explicit env, but keep a production fallback for Vercel where env injection may be missing
-const raw = env.REACT_APP_API_URL || (isVercelHost ? vercelBackendFallback : '');
+// prefer explicit env; if missing, default to backend in deployed environments and '/api' only for local dev
+const raw = env.REACT_APP_API_URL || (isLocalHost ? '' : vercelBackendFallback);
 const cleaned = raw.replace(/\/+$/, ''); // remove trailing slash(es)
 
 // if user provided a URL that already ends with /api, use it as-is, otherwise append /api
