@@ -47,6 +47,7 @@ Install backend dependencies:
 ## LAUNCH
 In the root of the project:
 
+    $ git checkout local-dev
     $ ./run.sh
 
 This script will automatically:
